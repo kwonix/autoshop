@@ -1,6 +1,6 @@
 -- Создание базы данных и пользователя
 CREATE DATABASE autoshop;
-CREATE USER autoshop_user WITH PASSWORD 'autoshop_password_2024';
+CREATE USER autoshop_user WITH PASSWORD 'autoshop_password_2025';
 GRANT ALL PRIVILEGES ON DATABASE autoshop TO autoshop_user;
 
 -- Подключение к базе autoshop

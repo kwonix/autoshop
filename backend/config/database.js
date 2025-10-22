@@ -5,7 +5,7 @@ const pool = new Pool({
     user: process.env.DB_USER || 'autoshop_user',
     host: process.env.DB_HOST || 'localhost',
     database: process.env.DB_NAME || 'autoshop',
-    password: process.env.DB_PASSWORD || 'autoshop_password_2024',
+    password: process.env.DB_PASSWORD || 'autoshop_password_2025',
     port: process.env.DB_PORT || 5432,
 });
 
