@@ -66,7 +66,7 @@ class Components {
                         </div>
                     </div>
                     <div class="copyright">
-                        <p>&copy; 2024 AutoGadget. Все права защищены.</p>
+                        <p>&copy; 2025 AutoGadget. Все права защищены.</p>
                     </div>
                 </div>
             </footer>
