@@ -14,23 +14,38 @@ class AdminApp {
         this.updateCurrentDate();
     }
 
-    checkAuth() {
-        const token = localStorage.getItem('admin_token');
-        if (!token) {
-            window.location.href = 'admin-login.html';
-            return;
+    async checkAuth() {
+    const token = localStorage.getItem('admin_token');
+    if (!token) {
+        window.location.href = 'admin-login.html';
+        return;
+    }
+
+    try {
+        // Проверяем валидность токена
+        const response = await fetch('/api/admin/dashboard', {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+
+        if (!response.ok) {
+            if (response.status === 401) {
+                this.logout();
+                return;
+            }
+            throw new Error('Invalid token');
         }
 
-        try {
-            const adminData = JSON.parse(localStorage.getItem('admin_data'));
-            if (adminData) {
-                document.getElementById('admin-username').textContent = adminData.name;
-            }
-        } catch (error) {
-            console.error('Error parsing admin data:', error);
-            this.logout();
+        const adminData = JSON.parse(localStorage.getItem('admin_data'));
+        if (adminData) {
+            document.getElementById('admin-username').textContent = adminData.name;
         }
+    } catch (error) {
+        console.error('Auth check failed:', error);
+        this.logout();
     }
+}
 
     setupNavigation() {
         const menuItems = document.querySelectorAll('.admin-menu-item[data-page]');
