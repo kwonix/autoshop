@@ -1,8 +1,7 @@
-// script.js - Основной скрипт фронтенда (адаптированный для Supabase)
+// script.js - Основной скрипт фронтенда
 class ShopApp {
     constructor() {
         this.cart = new CartManager();
-        this.supabase = window.supabaseClient;
         this.init();
     }
 
@@ -15,11 +14,10 @@ class ShopApp {
 
     async loadCategories() {
         try {
-            const categories = await this.supabase.getCategories();
+            const categories = await Components.apiCall('/categories');
             this.renderCategories(categories);
         } catch (error) {
             console.error('Error loading categories:', error);
-            this.showNotification('Ошибка загрузки категорий', 'error');
         }
     }
 
@@ -41,11 +39,10 @@ class ShopApp {
 
     async loadPopularProducts() {
         try {
-            const products = await this.supabase.getPopularProducts();
+            const products = await Components.apiCall('/products/popular');
             this.renderPopularProducts(products);
         } catch (error) {
             console.error('Error loading popular products:', error);
-            this.showNotification('Ошибка загрузки товаров', 'error');
         }
     }
 
@@ -64,7 +61,7 @@ class ShopApp {
                 <div class="product-info">
                     <h3>${product.name}</h3>
                     <p>${product.description}</p>
-                    <div class="price">${this.formatPrice(product.price)}</div>
+                    <div class="price">${Components.formatPrice(product.price)}</div>
                     <button class="btn btn-primary" onclick="shopApp.cart.addToCart(${product.id})">
                         В корзину
                     </button>
@@ -94,11 +91,15 @@ class ShopApp {
             submitBtn.disabled = true;
 
             try {
-                await this.supabase.sendMessage(formData);
-                this.showNotification('Сообщение успешно отправлено!');
+                await Components.apiCall('/contact', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                Components.showNotification('Сообщение успешно отправлено!');
                 form.reset();
             } catch (error) {
-                this.showNotification(error.message, 'error');
+                Components.showNotification(error.message, 'error');
             } finally {
                 submitBtn.textContent = originalText;
                 submitBtn.disabled = false;
@@ -107,47 +108,15 @@ class ShopApp {
     }
 
     setupAuthCheck() {
-        const user = this.supabase.getCurrentUser();
-        if (user) {
-            this.updateUIForLoggedInUser(user);
+        const token = localStorage.getItem('user_token');
+        if (token) {
+            // Обновляем интерфейс для авторизованного пользователя
+            const loginBtn = document.querySelector('.login-btn');
+            if (loginBtn) {
+                loginBtn.textContent = '👤 Кабинет';
+                loginBtn.href = 'profile.html'; // Можно добавить страницу профиля
+            }
         }
-    }
-
-    updateUIForLoggedInUser(user) {
-        const loginBtn = document.querySelector('.login-btn');
-        if (loginBtn) {
-            loginBtn.textContent = '👤 Кабинет';
-            loginBtn.href = 'profile.html';
-        }
-    }
-
-    formatPrice(price) {
-        return new Intl.NumberFormat('ru-RU', {
-            style: 'currency',
-            currency: 'RUB',
-            minimumFractionDigits: 0
-        }).format(price);
-    }
-
-    showNotification(message, type = 'success') {
-        const container = document.getElementById('notifications-container') || this.createNotificationsContainer();
-        const notification = document.createElement('div');
-        notification.className = `notification ${type}`;
-        notification.textContent = message;
-        
-        container.appendChild(notification);
-        
-        setTimeout(() => {
-            notification.remove();
-        }, 3000);
-    }
-
-    createNotificationsContainer() {
-        const container = document.createElement('div');
-        container.id = 'notifications-container';
-        container.className = 'notifications-container';
-        document.body.appendChild(container);
-        return container;
     }
 }
 
@@ -156,30 +125,31 @@ class CartManager {
         this.items = JSON.parse(localStorage.getItem('cart')) || [];
     }
 
-    async addToCart(productId, quantity = 1) {
-        try {
-            const product = await window.supabaseClient.getProduct(productId);
-            
-            const existingItem = this.items.find(item => item.id === productId);
-            
-            if (existingItem) {
-                existingItem.quantity += quantity;
-            } else {
-                this.items.push({
-                    id: product.id,
-                    name: product.name,
-                    price: product.price,
-                    image: product.image_url,
-                    quantity: quantity
-                });
-            }
-
-            this.saveCart();
-            this.updateCartCount();
-            this.showNotification('Товар добавлен в корзину!');
-        } catch (error) {
-            this.showNotification('Ошибка добавления товара', 'error');
+    addToCart(productId, quantity = 1) {
+        // В реальном приложении здесь был бы запрос к API для получения данных товара
+        const product = this.getProductData(productId);
+        if (!product) {
+            Components.showNotification('Товар не найден', 'error');
+            return;
         }
+
+        const existingItem = this.items.find(item => item.id === productId);
+        
+        if (existingItem) {
+            existingItem.quantity += quantity;
+        } else {
+            this.items.push({
+                id: product.id,
+                name: product.name,
+                price: product.price,
+                image: product.image_url,
+                quantity: quantity
+            });
+        }
+
+        this.saveCart();
+        this.updateCartCount();
+        Components.showNotification('Товар добавлен в корзину!');
     }
 
     removeFromCart(productId) {
@@ -232,10 +202,13 @@ class CartManager {
 
     async checkout(orderData) {
         try {
-            const order = await window.supabaseClient.createOrder({
-                ...orderData,
-                items: this.items,
-                total_amount: this.getTotalPrice()
+            const order = await Components.apiCall('/orders', {
+                method: 'POST',
+                body: {
+                    ...orderData,
+                    items: this.items,
+                    total_amount: this.getTotalPrice()
+                }
             });
 
             // Очищаем корзину после успешного заказа
@@ -249,25 +222,20 @@ class CartManager {
         }
     }
 
-    showNotification(message, type = 'success') {
-        const container = document.getElementById('notifications-container') || this.createNotificationsContainer();
-        const notification = document.createElement('div');
-        notification.className = `notification ${type}`;
-        notification.textContent = message;
+    // Временный метод для демо - в реальном приложении данные брались бы с сервера
+    getProductData(productId) {
+        const productsData = {
+            1: { id: 1, name: 'Видеорегистратор 4K', price: 5990, image_url: 'https://images.unsplash.com/photo-1606144042614-b2417e99c4e3' },
+            2: { id: 2, name: 'Автомобильные коврики', price: 3490, image_url: 'https://images.unsplash.com/photo-1570733780745-d192c48b8ff3' },
+            3: { id: 3, name: 'Компрессор автомобильный', price: 2790, image_url: 'https://images.unsplash.com/photo-1583121274602-3e2820c69888' },
+            4: { id: 4, name: 'Навигатор с радар-детектором', price: 8990, image_url: 'https://images.unsplash.com/photo-1558637845-c8b7ead71a3e' },
+            5: { id: 5, name: 'Полироль для кузова', price: 890, image_url: 'https://images.unsplash.com/photo-1544829099-b9a0c07fad1a' },
+            6: { id: 6, name: 'Чехлы на сиденья', price: 2490, image_url: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70' },
+            7: { id: 7, name: 'Сигнализация с автозапуском', price: 12990, image_url: 'https://images.unsplash.com/photo-1580273916550-e323be2ae537' },
+            8: { id: 8, name: 'Щетки стеклоочистителя', price: 1290, image_url: 'https://images.unsplash.com/photo-1552519507-da3b142c6e3d' }
+        };
         
-        container.appendChild(notification);
-        
-        setTimeout(() => {
-            notification.remove();
-        }, 3000);
-    }
-
-    createNotificationsContainer() {
-        const container = document.createElement('div');
-        container.id = 'notifications-container';
-        container.className = 'notifications-container';
-        document.body.appendChild(container);
-        return container;
+        return productsData[productId];
     }
 }
 

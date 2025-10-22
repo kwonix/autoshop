@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Админ-панель - AutoGadget</title>
+    <link rel="stylesheet" href="admin.css">
+</head>
+<body class="admin-body">
+    <div class="admin-container">
+        <!-- Sidebar -->
+        <nav class="admin-sidebar">
+            <div class="admin-logo">
+                <h2>🚗 AutoGadget Admin</h2>
+                <div class="admin-user-info">
+                    <span id="admin-username">Администратор</span>
+                </div>
+            </div>
+            
+            <ul class="admin-menu">
+                <li><a href="#dashboard" class="admin-menu-item active" data-page="dashboard">
+                    📊 Дашборд
+                </a></li>
+                <li><a href="#orders" class="admin-menu-item" data-page="orders">
+                    📦 Заказы <span class="menu-badge" id="new-orders-count">0</span>
+                </a></li>
+                <li><a href="#products" class="admin-menu-item" data-page="products">
+                    🛍️ Товары
+                </a></li>
+                <li><a href="#categories" class="admin-menu-item" data-page="categories">
+                    📁 Категории
+                </a></li>
+                <li><a href="#analytics" class="admin-menu-item" data-page="analytics">
+                    📈 Аналитика
+                </a></li>
+                <li><a href="#messages" class="admin-menu-item" data-page="messages">
+                    ✉️ Сообщения <span class="menu-badge" id="new-messages-count">0</span>
+                </a></li>
+                <li><a href="../index.html" class="admin-menu-item">
+                    🌐 На сайт
+                </a></li>
+            </ul>
+            
+            <div class="admin-footer">
+                <button id="logout-btn" class="btn btn-danger btn-block">🚪 Выйти</button>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="admin-main">
+            <header class="admin-header">
+                <h1 id="page-title">Дашборд</h1>
+                <div class="admin-actions">
+                    <span id="current-date"></span>
+                </div>
+            </header>
+
+            <div class="admin-content">
+                <!-- Страница Дашборда -->
+                <div id="dashboard-page" class="admin-page active">
+                    <div class="stats-grid" id="dashboard-stats">
+                        <!-- Статистика будет загружена через JS -->
+                    </div>
+                    
+                    <div class="dashboard-widgets">
+                        <div class="widget">
+                            <h3>Последние заказы</h3>
+                            <div id="recent-orders-list" class="widget-content">
+                                <!-- Список заказов -->
+                            </div>
+                        </div>
+                        
+                        <div class="widget">
+                            <h3>Популярные товары</h3>
+                            <div id="popular-products-list" class="widget-content">
+                                <!-- Список товаров -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Страница Заказов -->
+                <div id="orders-page" class="admin-page">
+                    <div class="page-header">
+                        <div class="filters">
+                            <select id="order-status-filter" class="filter-select">
+                                <option value="all">Все статусы</option>
+                                <option value="new">Новые</option>
+                                <option value="processing">В обработке</option>
+                                <option value="shipped">Отправлены</option>
+                                <option value="delivered">Доставлены</option>
+                                <option value="cancelled">Отменены</option>
+                            </select>
+                            <input type="date" id="order-date-filter" class="filter-input">
+                            <button class="btn btn-primary" onclick="adminApp.filterOrders()">Применить</button>
+                            <button class="btn btn-secondary" onclick="adminApp.resetFilters()">Сбросить</button>
+                        </div>
+                    </div>
+                    
+                    <div class="admin-table-container">
+                        <table class="admin-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Клиент</th>
+                                    <th>Дата</th>
+                                    <th>Сумма</th>
+                                    <th>Статус</th>
+                                    <th>Действия</th>
+                                </tr>
+                            </thead>
+                            <tbody id="orders-table-body">
+                                <!-- Данные заказов -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Страница Товаров -->
+                <div id="products-page" class="admin-page">
+                    <div class="page-header">
+                        <button class="btn btn-primary" onclick="adminApp.showProductModal()">
+                            ＋ Добавить товар
+                        </button>
+                        <div class="search-box">
+                            <input type="text" id="product-search" placeholder="Поиск товаров...">
+                            <button class="btn btn-secondary" onclick="adminApp.searchProducts()">Найти</button>
+                        </div>
+                    </div>
+                    
+                    <div class="admin-table-container">
+                        <table class="admin-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Изображение</th>
+                                    <th>Название</th>
+                                    <th>Категория</th>
+                                    <th>Цена</th>
+                                    <th>Остаток</th>
+                                    <th>Статус</th>
+                                    <th>Действия</th>
+                                </tr>
+                            </thead>
+                            <tbody id="products-table-body">
+                                <!-- Данные товаров -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Страница Категорий -->
+                <div id="categories-page" class="admin-page">
+                    <div class="page-header">
+                        <button class="btn btn-primary" onclick="adminApp.showCategoryModal()">
+                            ＋ Добавить категорию
+                        </button>
+                    </div>
+                    
+                    <div class="categories-grid" id="categories-grid">
+                        <!-- Сетка категорий -->
+                    </div>
+                </div>
+
+                <!-- Страница Аналитики -->
+                <div id="analytics-page" class="admin-page">
+                    <div class="analytics-period">
+                        <select id="analytics-period" class="filter-select" onchange="adminApp.loadAnalytics()">
+                            <option value="week">За неделю</option>
+                            <option value="month">За месяц</option>
+                            <option value="quarter">За квартал</option>
+                            <option value="year">За год</option>
+                        </select>
+                    </div>
+                    
+                    <div class="analytics-grid">
+                        <div class="analytics-card">
+                            <h3>Продажи</h3>
+                            <div class="chart-placeholder" id="sales-chart">
+                                <p>График продаж</p>
+                            </div>
+                        </div>
+                        
+                        <div class="analytics-card">
+                            <h3>Топ товары</h3>
+                            <div id="top-products-list">
+                                <!-- Список топ товаров -->
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="analytics-table">
+                        <h3>Детальная статистика</h3>
+                        <table class="admin-table">
+                            <thead>
+                                <tr>
+                                    <th>Товар</th>
+                                    <th>Продажи</th>
+                                    <th>Выручка</th>
+                                    <th>Рейтинг</th>
+                                </tr>
+                            </thead>
+                            <tbody id="analytics-table-body">
+                                <!-- Данные аналитики -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Страница Сообщений -->
+                <div id="messages-page" class="admin-page">
+                    <div class="page-header">
+                        <select id="message-status-filter" class="filter-select" onchange="adminApp.filterMessages()">
+                            <option value="all">Все сообщения</option>
+                            <option value="new">Новые</option>
+                            <option value="processed">Обработанные</option>
+                        </select>
+                    </div>
+                    
+                    <div class="messages-list" id="messages-list">
+                        <!-- Список сообщений -->
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Модальные окна -->
+    <div id="modal-overlay" class="modal-overlay"></div>
+    
+    <!-- Уведомления -->
+    <div id="notifications-container" class="notifications-container"></div>
+
+    <script src="admin-data.js"></script>
+    <script src="admin.js"></script>
+</body>
+</html>
