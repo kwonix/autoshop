@@ -3,60 +3,33 @@ class AdminApp {
     constructor() {
         this.currentPage = 'dashboard';
         this.currentFilters = {};
-        this.isInitialized = false;
+        this.init();
     }
 
-    async init() {
-        if (this.isInitialized) return;
-        
-        await this.checkAuth();
+    init() {
+        this.checkAuth();
         this.setupNavigation();
         this.setupEventListeners();
-        await this.loadDashboard();
+        this.loadDashboard();
         this.updateCurrentDate();
-        
-        this.isInitialized = true;
     }
 
-    async checkAuth() {
+    checkAuth() {
         const token = localStorage.getItem('admin_token');
         if (!token) {
-            console.log('No admin token found, redirecting to login');
-            this.redirectToLogin();
+            window.location.href = 'admin-login.html';
             return;
         }
 
         try {
-            // Проверяем валидность токена через API
-            const response = await fetch('/api/admin/dashboard', {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
-
-            if (!response.ok) {
-                if (response.status === 401) {
-                    console.log('Token invalid, logging out');
-                    this.logout();
-                }
-                throw new Error('Invalid token');
-            }
-
-            // Токен валиден, загружаем данные пользователя
             const adminData = JSON.parse(localStorage.getItem('admin_data'));
-            if (adminData && document.getElementById('admin-username')) {
+            if (adminData) {
                 document.getElementById('admin-username').textContent = adminData.name;
             }
-
         } catch (error) {
-            console.error('Auth check failed:', error);
+            console.error('Error parsing admin data:', error);
             this.logout();
         }
-    }
-
-    redirectToLogin() {
-        // Используем replace чтобы избежать истории навигации
-        window.location.replace('admin-login.html');
     }
 
     setupNavigation() {
@@ -72,15 +45,10 @@ class AdminApp {
     }
 
     setupEventListeners() {
-        // Выход из системы - проверяем что элемент существует
-        const logoutBtn = document.getElementById('logout-btn');
-        if (logoutBtn) {
-            logoutBtn.addEventListener('click', () => {
-                this.logout();
-            });
-        } else {
-            console.warn('Logout button not found');
-        }
+        // Выход из системы
+        document.getElementById('logout-btn').addEventListener('click', () => {
+            this.logout();
+        });
 
         // Закрытие модальных окон
         document.addEventListener('click', (e) => {
@@ -102,11 +70,7 @@ class AdminApp {
         document.querySelectorAll('.admin-menu-item').forEach(item => {
             item.classList.remove('active');
         });
-        
-        const activeItem = document.querySelector(`[data-page="${page}"]`);
-        if (activeItem) {
-            activeItem.classList.add('active');
-        }
+        document.querySelector(`[data-page="${page}"]`).classList.add('active');
         
         // Скрываем все страницы
         document.querySelectorAll('.admin-page').forEach(pageEl => {
@@ -114,16 +78,8 @@ class AdminApp {
         });
         
         // Показываем нужную страницу
-        const targetPage = document.getElementById(`${page}-page`);
-        if (targetPage) {
-            targetPage.classList.add('active');
-        }
-        
-        // Обновляем заголовок
-        const pageTitle = document.getElementById('page-title');
-        if (pageTitle) {
-            pageTitle.textContent = this.getPageTitle(page);
-        }
+        document.getElementById(`${page}-page`).classList.add('active');
+        document.getElementById('page-title').textContent = this.getPageTitle(page);
         
         // Загружаем данные для страницы
         this.loadPageData(page);
@@ -179,10 +135,8 @@ class AdminApp {
             month: 'long', 
             day: 'numeric' 
         };
-        const dateElement = document.getElementById('current-date');
-        if (dateElement) {
-            dateElement.textContent = now.toLocaleDateString('ru-RU', options);
-        }
+        document.getElementById('current-date').textContent = 
+            now.toLocaleDateString('ru-RU', options);
     }
 
     // === API METHODS ===
@@ -222,20 +176,13 @@ class AdminApp {
 
     // === DASHBOARD ===
     async loadDashboard() {
-        try {
-            const stats = await this.apiCall('/dashboard');
-            this.renderDashboard(stats);
-        } catch (error) {
-            console.error('Error loading dashboard:', error);
-        }
+        const stats = await this.apiCall('/dashboard');
+        this.renderDashboard(stats);
     }
 
     renderDashboard(stats) {
         const statsGrid = document.getElementById('dashboard-stats');
-        if (!statsGrid) {
-            console.warn('Dashboard stats grid not found');
-            return;
-        }
+        if (!statsGrid) return;
 
         statsGrid.innerHTML = `
             <div class="stat-card">
@@ -269,7 +216,7 @@ class AdminApp {
         const container = document.getElementById('recent-orders-list');
         if (!container) return;
 
-        if (!orders || orders.length === 0) {
+        if (orders.length === 0) {
             container.innerHTML = '<p class="text-center">Нет recent заказов</p>';
             return;
         }
@@ -298,7 +245,7 @@ class AdminApp {
         const container = document.getElementById('popular-products-list');
         if (!container) return;
 
-        if (!products || products.length === 0) {
+        if (products.length === 0) {
             container.innerHTML = '<p class="text-center">Нет популярных товаров</p>';
             return;
         }
@@ -328,19 +275,15 @@ class AdminApp {
 
     // === ORDERS ===
     async loadOrders() {
-        try {
-            const orders = await this.apiCall('/orders');
-            this.renderOrders(orders);
-        } catch (error) {
-            console.error('Error loading orders:', error);
-        }
+        const orders = await this.apiCall('/orders');
+        this.renderOrders(orders);
     }
 
     renderOrders(orders) {
         const tbody = document.getElementById('orders-table-body');
         if (!tbody) return;
 
-        if (!orders || orders.length === 0) {
+        if (orders.length === 0) {
             tbody.innerHTML = `
                 <tr>
                     <td colspan="6" class="text-center">
@@ -483,19 +426,15 @@ class AdminApp {
 
     // === PRODUCTS ===
     async loadProducts() {
-        try {
-            const products = await this.apiCall('/products');
-            this.renderProducts(products);
-        } catch (error) {
-            console.error('Error loading products:', error);
-        }
+        const products = await this.apiCall('/products');
+        this.renderProducts(products);
     }
 
     renderProducts(products) {
         const tbody = document.getElementById('products-table-body');
         if (!tbody) return;
 
-        if (!products || products.length === 0) {
+        if (products.length === 0) {
             tbody.innerHTML = `
                 <tr>
                     <td colspan="8" class="text-center">
@@ -538,8 +477,371 @@ class AdminApp {
         `).join('');
     }
 
-    // ... остальные методы остаются такими же, как в предыдущей версии ...
+    showProductModal(product = null) {
+        const isEdit = !!product;
+        
+        const modalContent = `
+            <h2>${isEdit ? 'Редактирование' : 'Добавление'} товара</h2>
+            
+            <form id="product-form">
+                <div class="form-group">
+                    <label for="product-name">Название товара *</label>
+                    <input type="text" id="product-name" value="${product?.name || ''}" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="product-description">Описание *</label>
+                    <textarea id="product-description" required>${product?.description || ''}</textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="product-category">Категория *</label>
+                    <select id="product-category" required>
+                        <option value="">Выберите категорию</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="product-price">Цена (₽) *</label>
+                    <input type="number" id="product-price" value="${product?.price || ''}" step="0.01" min="0" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="product-stock">Количество на складе *</label>
+                    <input type="number" id="product-stock" value="${product?.stock || ''}" min="0" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="product-image">URL изображения</label>
+                    <input type="url" id="product-image" value="${product?.image_url || ''}">
+                </div>
+                
+                <div class="form-group">
+                    <label for="product-features">Характеристики (каждая с новой строки)</label>
+                    <textarea id="product-features">${product?.features ? JSON.parse(product.features).join('\n') : ''}</textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="product-popular" ${product?.popular ? 'checked' : ''}>
+                        Популярный товар
+                    </label>
+                </div>
+                
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="product-active" ${!product || product.status === 'active' ? 'checked' : ''}>
+                        Активный товар
+                    </label>
+                </div>
+            </form>
+        `;
+        
+        const modalActions = `
+            <button class="btn btn-primary" onclick="adminApp.${isEdit ? 'update' : 'create'}Product(${product?.id || ''})">
+                ${isEdit ? 'Сохранить' : 'Создать'}
+            </button>
+            <button class="btn btn-secondary" onclick="adminApp.closeModal()">Отмена</button>
+        `;
+        
+        this.showModal(modalContent, modalActions);
+        this.loadCategoriesForSelect();
+    }
 
+    async loadCategoriesForSelect() {
+        try {
+            const categories = await this.apiCall('/categories');
+            const select = document.getElementById('product-category');
+            
+            select.innerHTML = '<option value="">Выберите категорию</option>' +
+                categories.map(cat => 
+                    `<option value="${cat.id}">${cat.name}</option>`
+                ).join('');
+        } catch (error) {
+            console.error('Error loading categories for select:', error);
+        }
+    }
+
+    async createProduct() {
+        const formData = this.getProductFormData();
+        
+        try {
+            await this.apiCall('/products', {
+                method: 'POST',
+                body: formData
+            });
+
+            this.closeModal();
+            this.loadProducts();
+            this.showNotification('Товар успешно создан');
+        } catch (error) {
+            this.showNotification('Ошибка создания товара', 'error');
+        }
+    }
+
+    async updateProduct(productId) {
+        const formData = this.getProductFormData();
+        
+        try {
+            await this.apiCall(`/products/${productId}`, {
+                method: 'PUT',
+                body: formData
+            });
+
+            this.closeModal();
+            this.loadProducts();
+            this.showNotification('Товар успешно обновлен');
+        } catch (error) {
+            this.showNotification('Ошибка обновления товара', 'error');
+        }
+    }
+
+    getProductFormData() {
+        const features = document.getElementById('product-features').value
+            .split('\n')
+            .filter(f => f.trim())
+            .map(f => f.trim());
+            
+        return {
+            name: document.getElementById('product-name').value,
+            description: document.getElementById('product-description').value,
+            category_id: parseInt(document.getElementById('product-category').value),
+            price: parseFloat(document.getElementById('product-price').value),
+            stock: parseInt(document.getElementById('product-stock').value),
+            image_url: document.getElementById('product-image').value,
+            features: features,
+            popular: document.getElementById('product-popular').checked,
+            status: document.getElementById('product-active').checked ? 'active' : 'inactive'
+        };
+    }
+
+    async editProduct(productId) {
+        try {
+            const products = await this.apiCall('/products');
+            const product = products.find(p => p.id === productId);
+            
+            if (product) {
+                this.showProductModal(product);
+            }
+        } catch (error) {
+            this.showNotification('Ошибка загрузки товара', 'error');
+        }
+    }
+
+    async deleteProduct(productId) {
+        if (!confirm('Вы уверены, что хотите удалить этот товар?')) {
+            return;
+        }
+
+        try {
+            await this.apiCall(`/products/${productId}`, {
+                method: 'DELETE'
+            });
+
+            this.loadProducts();
+            this.showNotification('Товар успешно удален');
+        } catch (error) {
+            this.showNotification('Ошибка удаления товара', 'error');
+        }
+    }
+
+    // === CATEGORIES ===
+    async loadCategories() {
+        const categories = await this.apiCall('/categories');
+        this.renderCategories(categories);
+    }
+
+    renderCategories(categories) {
+        const container = document.getElementById('categories-grid');
+        if (!container) return;
+
+        if (categories.length === 0) {
+            container.innerHTML = '<p class="text-center">Категории не найдены</p>';
+            return;
+        }
+
+        container.innerHTML = categories.map(category => `
+            <div class="category-card">
+                <div class="category-header">
+                    <div class="category-name">${category.name}</div>
+                    <div>
+                        <button class="btn-action btn-edit" onclick="adminApp.editCategory(${category.id})">
+                            ✏️
+                        </button>
+                    </div>
+                </div>
+                <p style="color: #666; margin-bottom: 15px;">${category.description}</p>
+                <div class="category-stats">
+                    <div class="stat-item">
+                        <div class="stat-value">${category.product_count}</div>
+                        <div class="stat-label">Товаров</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">${category.total_sales || 0}</div>
+                        <div class="stat-label">Продаж</div>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    // === ANALYTICS ===
+    async loadAnalytics() {
+        const period = document.getElementById('analytics-period')?.value || 'week';
+        const analytics = await this.apiCall(`/analytics?period=${period}`);
+        this.renderAnalytics(analytics);
+    }
+
+    renderAnalytics(analytics) {
+        this.renderTopProducts(analytics.top_products);
+        this.renderAnalyticsTable(analytics.top_products);
+    }
+
+    renderTopProducts(products) {
+        const container = document.getElementById('top-products-list');
+        if (!container) return;
+
+        container.innerHTML = products.map((product, index) => `
+            <div style="padding: 10px 0; border-bottom: 1px solid #f0f0f0;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <strong>${index + 1}. ${product.name}</strong>
+                        <br>
+                        <small>${product.sales_count} продаж</small>
+                    </div>
+                    <div style="text-align: right;">
+                        <strong>${this.formatPrice(product.revenue)}</strong>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    renderAnalyticsTable(products) {
+        const tbody = document.getElementById('analytics-table-body');
+        if (!tbody) return;
+
+        tbody.innerHTML = products.map(product => `
+            <tr>
+                <td>${product.name}</td>
+                <td>${product.sales_count}</td>
+                <td>${this.formatPrice(product.revenue)}</td>
+                <td>⭐ 4.8</td>
+            </tr>
+        `).join('');
+    }
+
+    // === MESSAGES ===
+    async loadMessages() {
+        const messages = await this.apiCall('/messages');
+        this.renderMessages(messages);
+    }
+
+    renderMessages(messages) {
+        const container = document.getElementById('messages-list');
+        if (!container) return;
+
+        if (messages.length === 0) {
+            container.innerHTML = '<p class="text-center">Сообщения не найдены</p>';
+            return;
+        }
+
+        container.innerHTML = messages.map(message => `
+            <div class="message-card ${message.status === 'new' ? 'unread' : ''}" 
+                 onclick="adminApp.viewMessage(${message.id})">
+                <div class="message-header">
+                    <div class="message-sender">${message.name}</div>
+                    <div class="message-date">
+                        ${new Date(message.created_at).toLocaleDateString()}
+                    </div>
+                </div>
+                <div class="message-preview">${message.message}</div>
+                <div>
+                    <span class="message-status">${message.status === 'new' ? 'Новое' : 'Обработано'}</span>
+                    <small>${message.email}</small>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    async viewMessage(messageId) {
+        try {
+            const messages = await this.apiCall('/messages');
+            const message = messages.find(m => m.id === messageId);
+            
+            if (!message) {
+                this.showNotification('Сообщение не найдено', 'error');
+                return;
+            }
+            
+            this.showMessageModal(message);
+        } catch (error) {
+            this.showNotification('Ошибка загрузки сообщения', 'error');
+        }
+    }
+
+    showMessageModal(message) {
+        const modalContent = `
+            <h2>Сообщение от ${message.name}</h2>
+            
+            <div class="form-group">
+                <label>Контактная информация</label>
+                <div style="background: #f8f9fa; padding: 15px; border-radius: 5px;">
+                    <p><strong>Имя:</strong> ${message.name}</p>
+                    <p><strong>Email:</strong> ${message.email}</p>
+                    <p><strong>Телефон:</strong> ${message.phone || 'Не указан'}</p>
+                    <p><strong>Дата:</strong> ${new Date(message.created_at).toLocaleString()}</p>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label>Сообщение</label>
+                <div style="background: #f8f9fa; padding: 15px; border-radius: 5px; min-height: 100px;">
+                    ${message.message}
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="message-response">Ответ</label>
+                <textarea id="message-response" placeholder="Введите ответ клиенту...">${message.response || ''}</textarea>
+            </div>
+            
+            <div class="form-group">
+                <label for="message-status">Статус</label>
+                <select id="message-status">
+                    <option value="new" ${message.status === 'new' ? 'selected' : ''}>Новое</option>
+                    <option value="processed" ${message.status === 'processed' ? 'selected' : ''}>Обработано</option>
+                </select>
+            </div>
+        `;
+        
+        const modalActions = `
+            <button class="btn btn-primary" onclick="adminApp.updateMessage(${message.id})">Сохранить</button>
+            <button class="btn btn-secondary" onclick="adminApp.closeModal()">Закрыть</button>
+        `;
+        
+        this.showModal(modalContent, modalActions);
+    }
+
+    async updateMessage(messageId) {
+        const status = document.getElementById('message-status').value;
+        const response = document.getElementById('message-response').value;
+        
+        try {
+            await this.apiCall(`/messages/${messageId}`, {
+                method: 'PUT',
+                body: { status, response }
+            });
+
+            this.closeModal();
+            this.loadMessages();
+            this.showNotification('Сообщение обработано');
+        } catch (error) {
+            this.showNotification('Ошибка обработки сообщения', 'error');
+        }
+    }
+
+    // === UTILITY METHODS ===
     formatPrice(price) {
         return new Intl.NumberFormat('ru-RU', {
             style: 'currency',
@@ -610,20 +912,11 @@ class AdminApp {
     logout() {
         localStorage.removeItem('admin_token');
         localStorage.removeItem('admin_data');
-        window.location.replace('admin-login.html');
+        window.location.href = 'admin-login.html';
     }
 }
 
-// Инициализация админ-панели с проверкой DOM
+// Инициализация админ-панели
 document.addEventListener('DOMContentLoaded', function() {
-    // Ждем полной загрузки DOM перед инициализацией
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', () => {
-            window.adminApp = new AdminApp();
-            window.adminApp.init();
-        });
-    } else {
-        window.adminApp = new AdminApp();
-        window.adminApp.init();
-    }
+    window.adminApp = new AdminApp();
 });
