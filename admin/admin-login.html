@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Вход в админ-панель - AutoGadget</title>
+    <link rel="stylesheet" href="admin.css">
+</head>
+<body class="login-body">
+    <div class="login-container">
+        <div class="login-card">
+            <div class="login-header">
+                <h1>AutoGadget Admin</h1>
+                <p>Вход в панель управления</p>
+            </div>
+            
+            <form id="login-form" class="login-form">
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <input type="email" id="email" name="email" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="password">Пароль</label>
+                    <input type="password" id="password" name="password" required>
+                </div>
+                
+                <button type="submit" class="btn btn-primary btn-block">Войти</button>
+            </form>
+            
+            <div class="login-footer">
+                <a href="../frontend/index.html" class="btn btn-outline btn-block">← На сайт</a>
+                <p>© 2024 AutoGadget. Все права защищены.</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="notifications-container" class="notifications-container"></div>
+
+    <script src="admin.js"></script>
+</body>
+</html>

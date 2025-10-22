@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AutoGadget - Автомобильные аксессуары</title>
+    <link rel="shortcut icon" type="image/x-icon" href="./img/logo.png">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Header будет загружен через JS -->
+    <div id="header-container"></div>
+
+    <!-- Главный баннер -->
+    <section class="hero" id="home">
+        <div class="container">
+            <h1>Лучшие автомобильные аксессуары</h1>
+            <p>Откройте для себя широкий ассортимент качественных автомобильных аксессуаров по доступным ценам. Все для комфорта и безопасности вашего автомобиля.</p>
+            <a href="catalog.html" class="btn">Смотреть каталог</a>
+        </div>
+    </section>
+
+    <!-- Категории товаров -->
+    <section class="categories" id="categories">
+        <div class="container">
+            <h2>Категории товаров</h2>
+            <div class="category-grid" id="categories-grid">
+                <!-- Категории загружаются через JS -->
+            </div>
+        </div>
+    </section>
+
+    <!-- Популярные товары -->
+    <section class="products" id="products">
+        <div class="container">
+            <h2>Популярные товары</h2>
+            <div class="product-grid" id="popular-products">
+                <!-- Товары загружаются через JS -->
+            </div>
+            <div class="text-center">
+                <a href="catalog.html" class="btn">Все товары</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- О компании -->
+    <section class="about" id="about">
+        <div class="container">
+            <h2>О нашей компании</h2>
+            <div class="about-content">
+                <div class="about-text">
+                    <p>AutoGadget - это ведущий поставщик автомобильных аксессуаров с более чем 10-летним опытом работы на рынке. Мы предлагаем широкий ассортимент товаров для автомобилей всех марок и моделей.</p>
+                    <p>Наша миссия - обеспечить автовладельцев качественными и надежными аксессуарами, которые повышают комфорт, безопасность и эстетику их транспортных средств.</p>
+                    <p>Мы тщательно отбираем поставщиков и тестируем продукцию, чтобы гарантировать нашим клиентам только лучшее качество по доступным ценам.</p>
+                    <a href="#contact" class="btn">Связаться с нами</a>
+                </div>
+                <div class="about-image"></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Преимущества -->
+    <section class="features">
+        <div class="container">
+            <h2>Почему выбирают нас</h2>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">🚚</div>
+                    <h3>Бесплатная доставка</h3>
+                    <p>При заказе от 5000 рублей доставка по всей России бесплатна</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🔧</div>
+                    <h3>Гарантия качества</h3>
+                    <p>На все товары предоставляется гарантия от 1 года</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">⏰</div>
+                    <h3>Быстрая обработка заказов</h3>
+                    <p>Обрабатываем заказы в течение 1 часа в рабочее время</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📞</div>
+                    <h3>Круглосуточная поддержка</h3>
+                    <p>Наша служба поддержки готова помочь 24/7</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Контакты -->
+    <section class="contact" id="contact">
+        <div class="container">
+            <h2>Свяжитесь с нами</h2>
+            <div class="contact-content">
+                <div class="contact-info">
+                    <h3>Контактная информация</h3>
+                    <p><strong>Адрес:</strong> г. Москва, ул. Автозаводская, д. 15</p>
+                    <p><strong>Телефон:</strong> +7 (495) 123-45-67</p>
+                    <p><strong>Email:</strong> info@autogadget.ru</p>
+                    <p><strong>Режим работы:</strong> Пн-Пт: 9:00-21:00, Сб-Вс: 10:00-20:00</p>
+                </div>
+                <div class="contact-form">
+                    <form id="contact-form">
+                        <input type="text" id="contact-name" placeholder="Ваше имя" required>
+                        <input type="email" id="contact-email" placeholder="Ваш email" required>
+                        <input type="tel" id="contact-phone" placeholder="Ваш телефон">
+                        <textarea id="contact-message" placeholder="Ваше сообщение" required></textarea>
+                        <button type="submit" class="btn">Отправить сообщение</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer загружается через JS -->
+    <div id="footer-container"></div>
+
+    <!-- Уведомления -->
+    <div id="notifications-container" class="notifications-container"></div>
+
+    <script src="./js/components.js"></script>
+    <script src="./js/script.js"></script>
+</body>
+</html>

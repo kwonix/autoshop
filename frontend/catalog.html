@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Каталог товаров - AutoGadget</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="header-container"></div>
+
+    <section class="catalog-filters">
+        <div class="container">
+            <div class="filters-content">
+                <div class="search-box">
+                    <input type="text" id="search-input" placeholder="Поиск товаров...">
+                    <button class="btn btn-primary" onclick="catalogApp.searchProducts()">Найти</button>
+                </div>
+                <div class="filter-options">
+                    <select id="category-filter">
+                        <option value="all">Все категории</option>
+                    </select>
+                    <select id="sort-by">
+                        <option value="name">По названию</option>
+                        <option value="price-low">Сначала дешевые</option>
+                        <option value="price-high">Сначала дорогие</option>
+                        <option value="popular">По популярности</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="catalog">
+        <div class="container">
+            <h1>Каталог товаров</h1>
+            <div class="product-grid" id="catalog-grid">
+                <!-- Товары загружаются через JS -->
+            </div>
+            <div class="pagination" id="pagination">
+                <!-- Пагинация -->
+            </div>
+        </div>
+    </section>
+
+    <div id="footer-container"></div>
+    <div id="notifications-container" class="notifications-container"></div>
+
+    <script src="./js/components.js"></script>
+    <script src="./js/script.js"></script>
+    <script src="./js/catalog.js"></script>
+</body>
+</html>
