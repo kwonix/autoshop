@@ -33,9 +33,9 @@ class Components {
                             <h3>AutoGadget</h3>
                             <p>Лучшие автомобильные аксессуары для вашего комфорта и безопасности.</p>
                             <div class="social-links">
-                                <a href="https://vk.com/kwonix" title="VKontakte">VK</a>
-                                <a href="https://t.me/kwonix" title="Telegram">TG</a>
-                                <a href="https://www.youtube.com/watch?v=04mfKJWDSzI" title="YouTube">YT</a>
+                                <a href="https://vk.com/kwonix" target="_blank" title="VKontakte">VK</a>
+                                <a href="https://t.me/kwonix" target="_blank" title="Telegram">TG</a>
+                                <a href="https://www.youtube.com/watch?v=04mfKJWDSzI" target="_blank" title="YouTube">YT</a>
                             </div>
                         </div>
                         <div class="footer-column">
