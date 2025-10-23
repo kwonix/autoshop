@@ -1,0 +1,39 @@
+# Git
+.git
+.gitignore
+
+# Node modules
+node_modules
+npm-debug.log
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Distribution
+.dist
+dist
+build
+
+# Documentation
+README.md
+*.md
+
+# Deployment scripts
+deploy.sh
+
+# Logs
+logs
+*.log

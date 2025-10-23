@@ -71,3 +71,12 @@ backup/
 *.pem
 *.key
 *.crt
+
+# Docker
+.docker/
+backup_*.sql
+postgres_data/
+
+# Distribution
+.dist/
+dist/
