@@ -53,6 +53,8 @@ const authenticateToken = (req, res, next) => {
     });
 };
 
+// Note: temporary internal endpoints and test scripts have been removed for security.
+
 const authenticateAdmin = (req, res, next) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
