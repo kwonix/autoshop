@@ -196,11 +196,35 @@ app.post('/api/orders', async (req, res) => {
             return res.status(400).json({ error: 'Все обязательные поля должны быть заполнены' });
         }
 
-        const result = await pool.query(
-            `INSERT INTO orders (customer_name, customer_email, customer_phone, customer_address, items, total_amount) 
-             VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-            [customer_name, customer_email, customer_phone, customer_address, JSON.stringify(items), total_amount]
-        );
+        // Попытка извлечь user_id из заголовка Authorization (если пользователь залогинен)
+        let userId = null;
+        try {
+            const authHeader = req.headers['authorization'];
+            const token = authHeader && authHeader.split(' ')[1];
+            if (token) {
+                const payload = jwt.verify(token, JWT_SECRET);
+                if (payload && payload.userId) userId = payload.userId;
+            }
+        } catch (e) {
+            // Игнорируем ошибку проверки токена — продолжаем как гость
+            console.warn('Order creation: token verify failed or absent');
+        }
+
+        // Вставляем user_id, если он известен
+        let result;
+        if (userId) {
+            result = await pool.query(
+                `INSERT INTO orders (user_id, customer_name, customer_email, customer_phone, customer_address, items, total_amount) 
+                 VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+                [userId, customer_name, customer_email, customer_phone, customer_address, JSON.stringify(items), total_amount]
+            );
+        } else {
+            result = await pool.query(
+                `INSERT INTO orders (customer_name, customer_email, customer_phone, customer_address, items, total_amount) 
+                 VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+                [customer_name, customer_email, customer_phone, customer_address, JSON.stringify(items), total_amount]
+            );
+        }
 
         // Добавляем запись в историю статусов
         await pool.query(
@@ -287,6 +311,82 @@ app.post('/api/auth/login', async (req, res) => {
     } catch (error) {
         console.error('Error logging in:', error);
         res.status(500).json({ error: 'Ошибка входа' });
+    }
+});
+
+// Получить профиль текущего пользователя
+app.get('/api/auth/profile', authenticateToken, async (req, res) => {
+    try {
+        const userId = req.user && req.user.userId;
+        const email = req.user && req.user.email;
+
+        if (!userId && !email) return res.status(400).json({ error: 'Не удалось определить пользователя' });
+
+        const result = userId
+            ? await pool.query('SELECT id, email, full_name, phone, address FROM users WHERE id = $1', [userId])
+            : await pool.query('SELECT id, email, full_name, phone, address FROM users WHERE email = $1', [email]);
+
+        if (result.rows.length === 0) return res.status(404).json({ error: 'Пользователь не найден' });
+
+        res.json(result.rows[0]);
+    } catch (error) {
+        console.error('Error fetching profile:', error);
+        res.status(500).json({ error: 'Ошибка получения профиля' });
+    }
+});
+
+// Обновить профиль текущего пользователя
+app.patch('/api/auth/profile', authenticateToken, async (req, res) => {
+    try {
+        const userId = req.user && req.user.userId;
+        const email = req.user && req.user.email;
+
+        if (!userId && !email) return res.status(400).json({ error: 'Не удалось определить пользователя' });
+
+        const { full_name, phone, address } = req.body;
+
+        // Обновляем доступные поля
+        const queryParts = [];
+        const params = [];
+        let idx = 1;
+
+        if (full_name !== undefined) {
+            queryParts.push(`full_name = $${idx++}`);
+            params.push(full_name);
+        }
+        if (phone !== undefined) {
+            queryParts.push(`phone = $${idx++}`);
+            params.push(phone);
+        }
+        if (address !== undefined) {
+            queryParts.push(`address = $${idx++}`);
+            params.push(address);
+        }
+
+        if (queryParts.length === 0) {
+            return res.status(400).json({ error: 'Нет полей для обновления' });
+        }
+
+        // Условие WHERE
+        let whereClause;
+        if (userId) {
+            whereClause = `WHERE id = $${idx}`;
+            params.push(userId);
+        } else {
+            whereClause = `WHERE email = $${idx}`;
+            params.push(email);
+        }
+
+        const updateQuery = `UPDATE users SET ${queryParts.join(', ')}, updated_at = CURRENT_TIMESTAMP ${whereClause} RETURNING id, email, full_name, phone, address`;
+
+        const result = await pool.query(updateQuery, params);
+
+        if (result.rows.length === 0) return res.status(404).json({ error: 'Пользователь не найден' });
+
+        res.json({ message: 'Профиль обновлён', user: result.rows[0] });
+    } catch (error) {
+        console.error('Error updating profile:', error);
+        res.status(500).json({ error: 'Ошибка обновления профиля' });
     }
 });
 
@@ -675,6 +775,31 @@ app.get('/api/health', async (req, res) => {
             database: 'disconnected',
             error: error.message 
         });
+    }
+});
+
+// Получить заказы текущего аутентифицированного пользователя
+app.get('/api/orders', authenticateToken, async (req, res) => {
+    try {
+        const email = req.user && req.user.email;
+        const userId = req.user && req.user.userId;
+
+        if (!email && !userId) {
+            return res.status(400).json({ error: 'Не удалось определить пользователя' });
+        }
+
+        let result;
+        if (email) {
+            result = await pool.query('SELECT * FROM orders WHERE customer_email = $1 ORDER BY created_at DESC', [email]);
+        } else {
+            // В случае, если в таблице orders будет поле user_id
+            result = await pool.query('SELECT * FROM orders WHERE user_id = $1 ORDER BY created_at DESC', [userId]);
+        }
+
+        res.json(result.rows);
+    } catch (error) {
+        console.error('Error fetching user orders:', error);
+        res.status(500).json({ error: 'Ошибка загрузки заказов пользователя' });
     }
 });
 
