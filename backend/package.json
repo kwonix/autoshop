@@ -1,5 +1,5 @@
 {
-  "name": "autoshop-backend",
+  "name": "autogadget-backend",
   "version": "1.0.0",
   "description": "Backend for AutoGadget shop",
   "main": "server.js",

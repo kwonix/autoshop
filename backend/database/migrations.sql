@@ -1,4 +1,4 @@
--- Additional migrations for AutoShop
+-- Additional migrations for AutoGadget
 -- This file is for future schema updates after initial deployment
 
 -- Note: Most tables are already created in init.sql

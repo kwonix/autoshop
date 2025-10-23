@@ -1,4 +1,4 @@
-# AutoShop - Интернет-магазин автомобильных аксессуаров
+# AutoGadget - Интернет-магазин автомобильных аксессуаров
 
 Полнофункциональный интернет-магазин с админ-панелью на чистом HTML/CSS/JS и Node.js бэкенде.
 
@@ -89,7 +89,7 @@ docker-compose up -d --build
 docker-compose ps
 
 # Резервное копирование БД
-docker-compose exec postgres pg_dump -U autoshop_user autoshop > backup.sql
+docker-compose exec postgres pg_dump -U autogadget_user autogadget > backup.sql
 ```
 
 ## 📊 Архитектура
@@ -185,7 +185,7 @@ lsof -i :80
 ### Проблемы с БД
 ```bash
 # Проверка здоровья БД
-docker-compose exec postgres pg_isready -U autoshop_user
+docker-compose exec postgres pg_isready -U autogadget_user
 
 # Логи БД
 docker-compose logs postgres
@@ -224,10 +224,10 @@ docker image prune -a -f
 
 ```bash
 # Создать резервную копию
-docker-compose exec -T postgres pg_dump -U autoshop_user autoshop > backup.sql
+docker-compose exec -T postgres pg_dump -U autogadget_user autogadget > backup.sql
 
 # Восстановить из резервной копии
-cat backup.sql | docker-compose exec -T postgres psql -U autoshop_user -d autoshop
+cat backup.sql | docker-compose exec -T postgres psql -U autogadget_user -d autogadget
 ```
 
 ## 🤝 Вклад в проект
@@ -245,7 +245,7 @@ cat backup.sql | docker-compose exec -T postgres psql -U autoshop_user -d autosh
 ## 📞 Контакты
 
 - Email: support@autogadget.ru
-- Telegram: @autoshop_support
+    - Telegram: @autogadget_support
 
 ## 🙏 Благодарности
 

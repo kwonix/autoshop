@@ -1,4 +1,4 @@
--- AutoShop Database Initialization
+-- AutoGadget Database Initialization
 -- This script runs automatically when PostgreSQL container starts for the first time
 
 -- Таблица категорий

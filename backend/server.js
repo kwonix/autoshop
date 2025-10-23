@@ -10,7 +10,7 @@ const { pool } = require('./config/database');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const JWT_SECRET = process.env.JWT_SECRET || 'autoshop_secret_key_2024';
+const JWT_SECRET = process.env.JWT_SECRET || 'autogadget_secret_key_2025';
 
 // Middleware
 app.use(helmet());
@@ -805,7 +805,7 @@ app.get('/api/orders', authenticateToken, async (req, res) => {
 
 // Запуск сервера
 app.listen(PORT, () => {
-    console.log(`AutoShop Server running on port ${PORT}`);
+    console.log(`AutoGadget Server running on port ${PORT}`);
     console.log(`API доступен по http://localhost:${PORT}/api`);
     console.log(`Frontend доступен по http://localhost:${PORT}`);
     console.log(`Admin panel доступна по http://localhost:${PORT}/admin`);

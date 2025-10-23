@@ -102,6 +102,18 @@ class Components {
         }).format(price);
     }
 
+    // Обновляет счётчик корзины, читая данные из localStorage.
+    // Используется как безопасный fallback до загрузки script.js/CartManager.
+    static updateCartCount() {
+        try {
+            const items = JSON.parse(localStorage.getItem('cart')) || [];
+            const total = items.reduce((sum, it) => sum + (it.quantity || 0), 0);
+            document.querySelectorAll('#cart-count').forEach(el => el.textContent = total);
+        } catch (e) {
+            console.warn('Components.updateCartCount: failed to read cart from localStorage', e);
+        }
+    }
+
     static async apiCall(endpoint, options = {}) {
         const baseURL = '/api';
         const url = `${baseURL}${endpoint}`;
@@ -148,6 +160,6 @@ document.addEventListener('DOMContentLoaded', function() {
         footerContainer.innerHTML = Components.footer();
     }
 
-    // Обновляем счетчик корзины
-    CartManager.updateCartCount();
+    // Обновляем счетчик корзины (безопасный fallback)
+    Components.updateCartCount();
 });

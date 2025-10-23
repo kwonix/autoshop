@@ -1,4 +1,4 @@
-# AutoShop - Docker Deployment Guide
+# AutoGadget - Docker Deployment Guide
 
 ## 🐳 Quick Start with Docker
 
@@ -45,20 +45,20 @@ Your application will be available at:
 
 ## 📦 Services
 
-### 1. PostgreSQL Database
-- **Container:** `autoshop-db`
+- ### 1. PostgreSQL Database
+- **Container:** `autogadget-db`
 - **Port:** 5432
 - **Image:** postgres:15-alpine
 - **Persistent Data:** Volume `postgres_data`
 
-### 2. Node.js Backend
-- **Container:** `autoshop-backend`
+- ### 2. Node.js Backend
+- **Container:** `autogadget-backend`
 - **Port:** 3000
 - **Built from:** `Dockerfile`
 - **Environment:** Configured via `.env`
 
-### 3. Nginx Web Server
-- **Container:** `autoshop-nginx`
+- ### 3. Nginx Web Server
+- **Container:** `autogadget-nginx`
 - **Ports:** 80 (HTTP), 443 (HTTPS)
 - **Image:** nginx:alpine
 - **Serves:** Frontend + Admin Panel
@@ -94,7 +94,7 @@ docker-compose logs -f nginx
 ### Execute commands in containers
 ```bash
 # Access PostgreSQL
-docker-compose exec postgres psql -U autoshop_user -d autoshop
+docker-compose exec postgres psql -U autogadget_user -d autogadget
 
 # Access backend shell
 docker-compose exec backend sh
@@ -125,17 +125,17 @@ docker-compose down -v
 
 ### Backup Database
 ```bash
-docker-compose exec postgres pg_dump -U autoshop_user autoshop > backup.sql
+docker-compose exec postgres pg_dump -U autogadget_user autogadget > backup.sql
 ```
 
 ### Restore Database
 ```bash
-cat backup.sql | docker-compose exec -T postgres psql -U autoshop_user -d autoshop
+cat backup.sql | docker-compose exec -T postgres psql -U autogadget_user -d autogadget
 ```
 
 ### Access Database Shell
 ```bash
-docker-compose exec postgres psql -U autoshop_user -d autoshop
+docker-compose exec postgres psql -U autogadget_user -d autogadget
 ```
 
 ## 🔍 Troubleshooting
@@ -162,7 +162,7 @@ docker-compose ps
 docker-compose logs postgres
 
 # Verify database is accessible
-docker-compose exec postgres pg_isready -U autoshop_user
+docker-compose exec postgres pg_isready -U autogadget_user
 ```
 
 ### Backend API not responding
@@ -222,7 +222,7 @@ docker-compose ps
 curl http://localhost:3000/api/health
 
 # Check database health
-docker-compose exec postgres pg_isready -U autoshop_user
+docker-compose exec postgres pg_isready -U autogadget_user
 ```
 
 ## 🚀 Production Deployment
@@ -267,7 +267,7 @@ docker system df
 docker-compose exec backend env
 
 # View container details
-docker inspect autoshop-backend
+docker inspect autogadget-backend
 ```
 
 ## 🔄 Updates
@@ -297,16 +297,16 @@ docker volume ls
 
 ### Inspect volume
 ```bash
-docker volume inspect autoshop_postgres_data
+docker volume inspect autogadget_postgres_data
 ```
 
 ## 🌐 Network
 
-Services communicate via the `autoshop-network` bridge network.
+Services communicate via the `autogadget-network` bridge network.
 
 ```bash
 # Inspect network
-docker network inspect autoshop_autoshop-network
+docker network inspect autogadget_autogadget-network
 
 # List all networks
 docker network ls

@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# AutoShop Docker Management Script
-# This script helps manage your Docker-based AutoShop application
+# AutoGadget Docker Management Script
+# This script helps manage your Docker-based AutoGadget application
 
 set -e
 
@@ -115,7 +115,7 @@ health_check() {
     fi
     
     echo -e "\nChecking database..."
-    if docker-compose exec -T postgres pg_isready -U autoshop_user > /dev/null; then
+    if docker-compose exec -T postgres pg_isready -U autogadget_user > /dev/null; then
         print_success "Database is healthy"
     else
         print_error "Database is not responding"
@@ -125,7 +125,7 @@ health_check() {
 backup_database() {
     print_header "Backing Up Database"
     BACKUP_FILE="backup_$(date +%Y%m%d_%H%M%S).sql"
-    docker-compose exec -T postgres pg_dump -U autoshop_user autoshop > "$BACKUP_FILE"
+    docker-compose exec -T postgres pg_dump -U autogadget_user autogadget > "$BACKUP_FILE"
     print_success "Database backed up to $BACKUP_FILE"
 }
 
@@ -140,7 +140,7 @@ clean_system() {
 }
 
 show_menu() {
-    echo -e "\n${GREEN}AutoShop Docker Manager${NC}"
+    echo -e "\n${GREEN}AutoGadget Docker Manager${NC}"
     echo "========================"
     echo "1)  Start services"
     echo "2)  Stop services"

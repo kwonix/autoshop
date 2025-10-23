@@ -1,4 +1,4 @@
-# 🚀 AutoShop - Docker Quick Start
+# 🚀 AutoGadget - Docker Quick Start
 
 ## Prerequisites
 - Docker Desktop (Windows/Mac) or Docker Engine (Linux)
@@ -50,7 +50,7 @@ docker-compose logs -f
 
 ## Default Admin Credentials
 (Will be set during database initialization)
-- Email: admin@autoshop.ru
+- Email: admin@autogadget.ru
 - Password: admin123
 
 **⚠️ IMPORTANT: Change this password immediately in production!**
@@ -75,13 +75,13 @@ docker-compose logs nginx     # Nginx only
 ### Database
 ```bash
 # Backup
-docker-compose exec postgres pg_dump -U autoshop_user autoshop > backup.sql
+docker-compose exec postgres pg_dump -U autogadget_user autogadget > backup.sql
 
 # Restore
-cat backup.sql | docker-compose exec -T postgres psql -U autoshop_user -d autoshop
+cat backup.sql | docker-compose exec -T postgres psql -U autogadget_user -d autogadget
 
 # Access database
-docker-compose exec postgres psql -U autoshop_user -d autoshop
+docker-compose exec postgres psql -U autogadget_user -d autogadget
 ```
 
 ### Rebuild
@@ -171,7 +171,7 @@ docker system prune -a
 ### Backup Strategy
 ```bash
 # Daily backup script
-0 2 * * * docker-compose exec -T postgres pg_dump -U autoshop_user autoshop > /backups/autoshop_$(date +\%Y\%m\%d).sql
+0 2 * * * docker-compose exec -T postgres pg_dump -U autogadget_user autogadget > /backups/autogadget_$(date +\%Y\%m\%d).sql
 ```
 
 ## Need Help?

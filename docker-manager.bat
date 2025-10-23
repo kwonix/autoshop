@@ -1,11 +1,11 @@
 @echo off
-REM AutoShop Docker Manager for Windows
+REM AutoGadget Docker Manager for Windows
 setlocal enabledelayedexpansion
 
 :menu
 cls
 echo ====================================
-echo   AutoShop Docker Manager
+echo   AutoGadget Docker Manager
 echo ====================================
 echo.
 echo 1. Start Services
@@ -136,7 +136,7 @@ if errorlevel 1 (
 )
 echo.
 echo Checking database...
-docker-compose exec -T postgres pg_isready -U autoshop_user
+docker-compose exec -T postgres pg_isready -U autogadget_user
 if errorlevel 1 (
     echo Database: NOT RESPONDING
 ) else (
@@ -152,7 +152,7 @@ set timestamp=%date:~-4%%date:~3,2%%date:~0,2%_%time:~0,2%%time:~3,2%%time:~6,2%
 set timestamp=%timestamp: =0%
 set backup_file=backup_%timestamp%.sql
 echo.
-docker-compose exec -T postgres pg_dump -U autoshop_user autoshop > %backup_file%
+docker-compose exec -T postgres pg_dump -U autogadget_user autogadget > %backup_file%
 if errorlevel 1 (
     echo Backup FAILED!
 ) else (

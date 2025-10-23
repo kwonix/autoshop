@@ -7,14 +7,12 @@ async function generateHashes() {
     // Admin password: admin123
     const adminHash = await bcrypt.hash('admin123', 10);
     console.log('Admin (admin@autogadget.ru):');
-    console.log('  Password: admin123');
     console.log('  Hash:', adminHash);
     console.log('');
     
     // User password: user123
     const userHash = await bcrypt.hash('user123', 10);
     console.log('User (user@example.com):');
-    console.log('  Password: user123');
     console.log('  Hash:', userHash);
     console.log('');
     

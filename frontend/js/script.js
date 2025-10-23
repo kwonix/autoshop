@@ -114,7 +114,7 @@ class ShopApp {
             const loginBtn = document.querySelector('.login-btn');
             if (loginBtn) {
                 loginBtn.textContent = '👤 Кабинет';
-                loginBtn.href = 'profile.html'; // Можно добавить страницу профиля
+                loginBtn.href = 'account.html'; // Перенаправляем на страницу кабинета
             }
         }
     }
