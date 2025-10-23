@@ -48,9 +48,8 @@ class AuthApp {
                 body: formData
             });
 
-            // Сохраняем токен и данные пользователя
+            // Сохраняем только токен — профиль хранится на сервере
             localStorage.setItem('user_token', result.token);
-            localStorage.setItem('user_data', JSON.stringify(result.user));
 
             Components.showNotification('Успешный вход!');
 
@@ -122,6 +121,7 @@ class AuthApp {
     }
 
     static logout() {
+        // Удаляем токен и очищаем возможные старые локальные данные
         localStorage.removeItem('user_token');
         localStorage.removeItem('user_data');
         window.location.href = 'index.html';

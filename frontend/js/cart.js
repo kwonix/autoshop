@@ -88,13 +88,20 @@ class CartApp {
         }
 
         // Заполняем форму данными пользователя, если он авторизован
-        const userData = this.getUserData();
-        if (userData) {
-            document.getElementById('customer-name').value = userData.full_name || '';
-            document.getElementById('customer-email').value = userData.email || '';
-            document.getElementById('customer-phone').value = userData.phone || '';
-            document.getElementById('customer-address').value = userData.address || '';
-        }
+        // Получаем профиль с сервера (не используем localStorage для профиля)
+        (async () => {
+            try {
+                const userData = await this.getUserData();
+                if (userData) {
+                    document.getElementById('customer-name').value = userData.full_name || '';
+                    document.getElementById('customer-email').value = userData.email || '';
+                    document.getElementById('customer-phone').value = userData.phone || '';
+                    document.getElementById('customer-address').value = userData.address || '';
+                }
+            } catch (e) {
+                console.warn('Не удалось получить профиль для автозаполнения оформления заказа', e);
+            }
+        })();
 
         document.getElementById('checkout-modal').style.display = 'block';
     }
@@ -107,10 +114,15 @@ class CartApp {
         const token = localStorage.getItem('user_token');
         if (token) {
             try {
-                const userData = JSON.parse(localStorage.getItem('user_data'));
-                return userData;
+                // Получаем профиль с сервера
+                return Components.apiCall('/auth/profile', {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
             } catch (error) {
-                console.error('Error parsing user data:', error);
+                console.error('Error fetching user profile:', error);
             }
         }
         return null;
@@ -137,7 +149,11 @@ class CartApp {
         submitBtn.disabled = true;
 
         try {
-            const order = await this.cart.checkout(formData);
+            // Перед отправкой заказа передаём Authorization при наличии токена
+            const token = localStorage.getItem('user_token');
+            const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+
+            const order = await this.cart.checkout({ ...formData, _headers: headers });
             
             Components.showNotification(`Заказ #${order.id} успешно оформлен!`);
             this.closeCheckoutModal();

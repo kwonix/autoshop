@@ -7,14 +7,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
     }
 
+    // Получаем профиль с сервера — профиль должен храниться на стороне сервера
     let user = {};
-    try {
-        user = JSON.parse(localStorage.getItem('user_data') || '{}');
-    } catch (e) {
-        console.error('Ошибка парсинга user_data', e);
-    }
-
-    // Попробуем получить профиль с сервера (если доступен), иначе используем localStorage
     try {
         const profile = await Components.apiCall('/auth/profile', {
             method: 'GET',
@@ -22,10 +16,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 'Authorization': `Bearer ${token}`
             }
         });
-        user = Object.assign({}, user, profile);
+        user = profile || {};
     } catch (e) {
-        // Если ошибка — оставляем локальные данные
-        console.warn('Profile fetch failed, using local data');
+        console.warn('Profile fetch failed; profile data unavailable', e);
     }
 
     // Заполняем форму профиля
@@ -56,16 +49,16 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             });
 
-            // Обновляем localStorage на клиенте
-            const newUser = Object.assign({}, user, result.user);
-            localStorage.setItem('user_data', JSON.stringify(newUser));
-            Components.showNotification('Профиль сохранён');
+                // Обновляем интерфейс (не сохраняем профиль в localStorage — он хранится на сервере)
+                const newUser = Object.assign({}, user, result.user);
+                document.getElementById('profile-email').value = newUser.email || '';
+                document.getElementById('profile-name').value = newUser.full_name || '';
+                document.getElementById('profile-phone').value = newUser.phone || '';
+                Components.showNotification('Профиль сохранён');
         } catch (error) {
             console.error('Ошибка сохранения профиля на сервере:', error);
-            // fallback: сохраняем локально
-            const newUser = Object.assign({}, user, { full_name: name, phone });
-            localStorage.setItem('user_data', JSON.stringify(newUser));
-            Components.showNotification('Сохранено локально (сервер недоступен)', 'warning');
+                // Не сохраняем профиль локально — показываем ошибку и предлагаем повторить
+                Components.showNotification('Ошибка сохранения профиля на сервере. Попробуйте позже.', 'error');
         }
     });
 

@@ -202,10 +202,17 @@ class CartManager {
 
     async checkout(orderData) {
         try {
+            // Если caller передал дополнительные заголовки (например, Authorization), используем их
+            const extraHeaders = orderData && orderData._headers ? orderData._headers : {};
+            // Убираем служебное поле _headers из тела запроса
+            const cleanedOrderData = Object.assign({}, orderData);
+            if (cleanedOrderData._headers) delete cleanedOrderData._headers;
+
             const order = await Components.apiCall('/orders', {
                 method: 'POST',
+                headers: extraHeaders,
                 body: {
-                    ...orderData,
+                    ...cleanedOrderData,
                     items: this.items,
                     total_amount: this.getTotalPrice()
                 }
