@@ -7,6 +7,7 @@ const rateLimit = require('express-rate-limit');
 require('dotenv').config();
 
 const { pool } = require('./config/database');
+const path = require('path');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -16,7 +17,16 @@ const JWT_SECRET = process.env.JWT_SECRET || 'autogadget_secret_key_2025';
 app.use(helmet());
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
-app.use(express.static('../frontend'));
+// Serve admin panel static files at /admin (use admin.html as the index)
+app.use('/admin', express.static(path.join(__dirname, '..', 'admin'), { index: 'admin.html' }));
+
+// Fallback for admin SPA routes (if any) to admin.html
+app.get('/admin/*', (req, res) => {
+    res.sendFile(path.join(__dirname, '..', 'admin', 'admin.html'));
+});
+
+// Serve frontend static files
+app.use(express.static(path.join(__dirname, '..', 'frontend')));
 
 // Rate limiting
 const limiter = rateLimit({
