@@ -512,8 +512,9 @@ class AdminApp {
                 </div>
                 
                 <div class="form-group">
-                    <label for="product-image">URL изображения</label>
-                    <input type="url" id="product-image" value="${product?.image_url || ''}">
+                    <label for="product-image">URL изображения или загрузить файл</label>
+                    <input type="url" id="product-image" value="${product?.image_url || ''}" placeholder="https://...">
+                    <input type="file" id="product-image-file" accept="image/*" style="margin-top:8px;">
                 </div>
                 
                 <div class="form-group">
@@ -563,36 +564,94 @@ class AdminApp {
     }
 
     async createProduct() {
-        const formData = this.getProductFormData();
-        
+        // If user selected a file, send multipart/form-data
         try {
-            await this.apiCall('/products', {
-                method: 'POST',
-                body: formData
-            });
+            const fileInput = document.getElementById('product-image-file');
+            const token = localStorage.getItem('admin_token');
+
+            if (fileInput && fileInput.files && fileInput.files.length > 0) {
+                const fd = new FormData();
+                const data = this.getProductFormData();
+                // append scalar fields
+                Object.keys(data).forEach(key => {
+                    if (key === 'features') {
+                        fd.append(key, JSON.stringify(data[key]));
+                    } else {
+                        fd.append(key, data[key] === undefined ? '' : data[key]);
+                    }
+                });
+                fd.append('image', fileInput.files[0]);
+
+                const res = await fetch('/api/admin/products', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: fd
+                });
+
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({}));
+                    throw new Error(err.error || 'Ошибка создания товара');
+                }
+            } else {
+                const formData = this.getProductFormData();
+                await this.apiCall('/products', {
+                    method: 'POST',
+                    body: formData
+                });
+            }
 
             this.closeModal();
             this.loadProducts();
             this.showNotification('Товар успешно создан');
         } catch (error) {
-            this.showNotification('Ошибка создания товара', 'error');
+            this.showNotification(error.message || 'Ошибка создания товара', 'error');
         }
     }
 
     async updateProduct(productId) {
-        const formData = this.getProductFormData();
-        
         try {
-            await this.apiCall(`/products/${productId}`, {
-                method: 'PUT',
-                body: formData
-            });
+            const fileInput = document.getElementById('product-image-file');
+            const token = localStorage.getItem('admin_token');
+
+            if (fileInput && fileInput.files && fileInput.files.length > 0) {
+                const fd = new FormData();
+                const data = this.getProductFormData();
+                Object.keys(data).forEach(key => {
+                    if (key === 'features') {
+                        fd.append(key, JSON.stringify(data[key]));
+                    } else {
+                        fd.append(key, data[key] === undefined ? '' : data[key]);
+                    }
+                });
+                fd.append('image', fileInput.files[0]);
+
+                const res = await fetch(`/api/admin/products/${productId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: fd
+                });
+
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({}));
+                    throw new Error(err.error || 'Ошибка обновления товара');
+                }
+            } else {
+                const formData = this.getProductFormData();
+                await this.apiCall(`/products/${productId}`, {
+                    method: 'PUT',
+                    body: formData
+                });
+            }
 
             this.closeModal();
             this.loadProducts();
             this.showNotification('Товар успешно обновлен');
         } catch (error) {
-            this.showNotification('Ошибка обновления товара', 'error');
+            this.showNotification(error.message || 'Ошибка обновления товара', 'error');
         }
     }
 
@@ -683,6 +742,116 @@ class AdminApp {
                 </div>
             </div>
         `).join('');
+    }
+
+    // === FILTERS AND CATEGORIES ACTIONS ===
+    async filterOrders() {
+        const status = document.getElementById('order-status-filter')?.value || 'all';
+        try {
+            const orders = await this.apiCall(`/orders?status=${status}`);
+            this.renderOrders(orders);
+        } catch (error) {
+            this.showNotification('Ошибка применения фильтров', 'error');
+        }
+    }
+
+    resetFilters() {
+        const statusEl = document.getElementById('order-status-filter');
+        const dateEl = document.getElementById('order-date-filter');
+        if (statusEl) statusEl.value = 'all';
+        if (dateEl) dateEl.value = '';
+        this.loadOrders();
+    }
+
+    async searchProducts() {
+        const q = document.getElementById('product-search')?.value || '';
+        try {
+            // Use public products endpoint which supports search
+            const resp = await fetch(`/api/products?search=${encodeURIComponent(q)}&limit=100`);
+            const data = await resp.json();
+            const products = data.products || [];
+            this.renderProducts(products);
+        } catch (error) {
+            this.showNotification('Ошибка поиска товаров', 'error');
+        }
+    }
+
+    showCategoryModal(category = null) {
+        const isEdit = !!category;
+        const modalContent = `
+            <h2>${isEdit ? 'Редактирование' : 'Добавление'} категории</h2>
+            <form id="category-form">
+                <div class="form-group">
+                    <label for="category-name">Название *</label>
+                    <input type="text" id="category-name" value="${category?.name || ''}" required>
+                </div>
+                <div class="form-group">
+                    <label for="category-slug">Slug (латиницей)</label>
+                    <input type="text" id="category-slug" value="${category?.slug || ''}">
+                </div>
+                <div class="form-group">
+                    <label for="category-description">Описание</label>
+                    <textarea id="category-description">${category?.description || ''}</textarea>
+                </div>
+                <div class="form-group">
+                    <label for="category-image">URL изображения</label>
+                    <input type="url" id="category-image" value="${category?.image_url || ''}">
+                </div>
+            </form>
+        `;
+
+        const modalActions = isEdit ? `
+            <button class="btn btn-primary" onclick="adminApp.createCategory(${category.id})">Сохранить</button>
+            <button class="btn btn-secondary" onclick="adminApp.closeModal()">Отмена</button>
+        ` : `
+            <button class="btn btn-primary" onclick="adminApp.createCategory()">Создать</button>
+            <button class="btn btn-secondary" onclick="adminApp.closeModal()">Отмена</button>
+        `;
+
+        this.showModal(modalContent, modalActions);
+    }
+
+    async editCategory(categoryId) {
+        try {
+            const categories = await this.apiCall('/categories');
+            const category = categories.find(c => c.id === categoryId);
+            if (!category) return this.showNotification('Категория не найдена', 'error');
+            this.showCategoryModal(category);
+        } catch (error) {
+            this.showNotification('Ошибка загрузки категории', 'error');
+        }
+    }
+
+    async createCategory(categoryId = null) {
+        try {
+            const name = document.getElementById('category-name').value;
+            const slug = document.getElementById('category-slug').value;
+            const description = document.getElementById('category-description').value;
+            const image_url = document.getElementById('category-image').value;
+
+            if (!name) return this.showNotification('Название обязательно', 'error');
+
+            if (categoryId) {
+                // try to update (server may not have PUT; use POST fallback)
+                const res = await fetch(`/api/admin/categories/${categoryId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('admin_token')}` },
+                    body: JSON.stringify({ name, slug, description, image_url })
+                });
+                if (!res.ok) throw new Error((await res.json()).error || 'Ошибка обновления категории');
+            } else {
+                await this.apiCall('/categories', {
+                    method: 'POST',
+                    body: { name, slug, description, image_url }
+                });
+            }
+
+            this.closeModal();
+            this.loadCategories();
+            this.showNotification(categoryId ? 'Категория обновлена' : 'Категория создана');
+        } catch (error) {
+            this.showNotification(error.message || 'Ошибка сохранения категории', 'error');
+        }
     }
 
     // === ANALYTICS ===

@@ -8,6 +8,8 @@ require('dotenv').config();
 
 const { pool } = require('./config/database');
 const path = require('path');
+const multer = require('multer');
+const fs = require('fs');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -591,16 +593,40 @@ app.get('/api/admin/products', authenticateAdmin, async (req, res) => {
         res.status(500).json({ error: 'Ошибка загрузки товаров' });
     }
 });
+// Multer setup for image uploads (products)
+const uploadsDir = path.join(__dirname, '..', 'frontend', 'img');
+if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
 
-// Создать товар
-app.post('/api/admin/products', authenticateAdmin, async (req, res) => {
+const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        cb(null, uploadsDir);
+    },
+    filename: function (req, file, cb) {
+        const ext = path.extname(file.originalname) || '.png';
+        const name = `${Date.now()}-${Math.random().toString(36).substring(2,8)}${ext}`;
+        cb(null, name);
+    }
+});
+
+const upload = multer({ storage });
+
+// Создать товар (поддерживает multipart/form-data с полем 'image')
+app.post('/api/admin/products', authenticateAdmin, upload.single('image'), async (req, res) => {
     try {
-        const { name, description, price, category_id, image_url, stock, popular, features } = req.body;
-        
+        // Когда используется multipart, multer положит поля в req.body
+        const body = req.body || {};
+        const { name, description, price, category_id, image_url, stock, popular, features } = body;
+
+        // Если был загружен файл, формируем image_url
+        let finalImageUrl = image_url;
+        if (req.file) {
+            finalImageUrl = `/img/${req.file.filename}`;
+        }
+
         const result = await pool.query(
             `INSERT INTO products (name, description, price, category_id, image_url, stock, popular, features) 
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
-            [name, description, price, category_id, image_url, stock, popular, JSON.stringify(features)]
+            [name, description, price, category_id, finalImageUrl, stock, popular === 'true' || popular === true, JSON.stringify(features ? JSON.parse(features) : [])]
         );
 
         res.status(201).json(result.rows[0]);
@@ -610,18 +636,24 @@ app.post('/api/admin/products', authenticateAdmin, async (req, res) => {
     }
 });
 
-// Обновить товар
-app.put('/api/admin/products/:id', authenticateAdmin, async (req, res) => {
+// Обновить товар (поддерживает multipart/form-data с полем 'image')
+app.put('/api/admin/products/:id', authenticateAdmin, upload.single('image'), async (req, res) => {
     try {
         const { id } = req.params;
-        const { name, description, price, category_id, image_url, stock, popular, features, status } = req.body;
+        const body = req.body || {};
+        const { name, description, price, category_id, image_url, stock, popular, features, status } = body;
+
+        let finalImageUrl = image_url;
+        if (req.file) {
+            finalImageUrl = `/img/${req.file.filename}`;
+        }
 
         const result = await pool.query(
             `UPDATE products 
              SET name = $1, description = $2, price = $3, category_id = $4, image_url = $5, 
                  stock = $6, popular = $7, features = $8, status = $9, updated_at = CURRENT_TIMESTAMP 
              WHERE id = $10 RETURNING *`,
-            [name, description, price, category_id, image_url, stock, popular, JSON.stringify(features), status, id]
+            [name, description, price, category_id, finalImageUrl, stock, popular === 'true' || popular === true, JSON.stringify(features ? JSON.parse(features) : []), status, id]
         );
 
         if (result.rows.length === 0) {
@@ -684,6 +716,26 @@ app.post('/api/admin/categories', authenticateAdmin, async (req, res) => {
     } catch (error) {
         console.error('Error creating category:', error);
         res.status(500).json({ error: 'Ошибка создания категории' });
+    }
+});
+
+// Обновить категорию
+app.put('/api/admin/categories/:id', authenticateAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { name, description, slug, image_url } = req.body;
+
+        const result = await pool.query(
+            `UPDATE categories SET name = $1, description = $2, slug = $3, image_url = $4, updated_at = CURRENT_TIMESTAMP WHERE id = $5 RETURNING *`,
+            [name, description, slug, image_url, id]
+        );
+
+        if (result.rows.length === 0) return res.status(404).json({ error: 'Категория не найдена' });
+
+        res.json(result.rows[0]);
+    } catch (error) {
+        console.error('Error updating category:', error);
+        res.status(500).json({ error: 'Ошибка обновления категории' });
     }
 });
 
