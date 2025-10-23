@@ -107,7 +107,7 @@ app.get('/api/products', async (req, res) => {
         const result = await pool.query(query, params);
         
         // Получаем общее количество для пагинации
-        let countQuery = 'SELECT COUNT(*) FROM products p LEFT JOIN categories c ON p.category_id = c.id WHERE p.status = "active"';
+        let countQuery = "SELECT COUNT(*) FROM products p LEFT JOIN categories c ON p.category_id = c.id WHERE p.status = 'active'";
         const countParams = [];
         
         if (category && category !== 'all') {
