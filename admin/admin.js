@@ -16,7 +16,7 @@ class AdminApp {
 
     checkAuth() {
         const token = localStorage.getItem('admin_token');
-        if (!token) {
+        if (!token || token === 'null' || token === 'undefined') {
             window.location.href = 'admin-login.html';
             return;
         }
@@ -157,14 +157,35 @@ class AdminApp {
 
         try {
             const response = await fetch(`/api/admin${endpoint}`, config);
-            const data = await response.json();
+
+            // Try to parse JSON, but fall back to text for non-JSON responses
+            let data;
+            try {
+                data = await response.json();
+            } catch (parseErr) {
+                data = await response.text();
+            }
 
             if (!response.ok) {
-                if (response.status === 401) {
+                // If unauthorized or forbidden, clear local auth and redirect to login
+                if (response.status === 401 || response.status === 403) {
+                    // Try to surface server message, then logout
+                    const serverMessage = (data && typeof data === 'object' && data.error) ? data.error : String(data || 'Доступ запрещен');
+                    console.error('API call unauthorized/forbidden', { endpoint, status: response.status, response: data });
+                    this.showNotification(serverMessage, 'error');
                     this.logout();
-                    throw new Error('Сессия истекла');
+                    const err = new Error(serverMessage);
+                    err.status = response.status;
+                    err.response = data;
+                    throw err;
                 }
-                throw new Error(data.error || 'Ошибка сервера');
+
+                const serverMessage = (data && typeof data === 'object' && data.error) ? data.error : String(data || 'Ошибка сервера');
+                const err = new Error(serverMessage);
+                err.status = response.status;
+                err.response = data;
+                console.error('API call failed', { endpoint, status: response.status, response: data });
+                throw err;
             }
 
             return data;
@@ -322,19 +343,47 @@ class AdminApp {
         `).join('');
     }
 
-    async viewOrder(orderId) {
+    // Render order items safely (accepts JSON string or already-parsed array)
+    renderOrderItems(items) {
+        let parsed = [];
+        try {
+            if (!items) return '';
+            if (typeof items === 'string') {
+                parsed = JSON.parse(items);
+            } else if (Array.isArray(items)) {
+                parsed = items;
+            } else if (typeof items === 'object') {
+                // Sometimes pg returns jsonb as object
+                parsed = items;
+            }
+        } catch (e) {
+            console.error('Failed to parse order items:', e);
+            return '<div class="text-danger">Невозможно отобразить товары в заказе</div>';
+        }
+
+        return parsed.map(item => `
+                        <div style="display: flex; justify-content: space-between; padding: 5px 0;">
+                            <span>${item.name}</span>
+                            <span>${item.quantity} × ${this.formatPrice(item.price)}</span>
+                        </div>
+                    `).join('');
+    }
+
+    async viewOrder(orderId, isEdit = false) {
         try {
             const orders = await this.apiCall('/orders');
             const order = orders.find(o => o.id === orderId);
-            
+
             if (!order) {
                 this.showNotification('Заказ не найден', 'error');
                 return;
             }
-            
-            this.showOrderModal(order);
+
+            this.showOrderModal(order, isEdit);
         } catch (error) {
-            this.showNotification('Ошибка загрузки заказа', 'error');
+            console.error('viewOrder error:', error);
+            const msg = error && error.message ? error.message : 'Ошибка загрузки заказа';
+            this.showNotification(msg, 'error');
         }
     }
 
@@ -355,12 +404,7 @@ class AdminApp {
             <div class="form-group">
                 <label>Товары в заказе</label>
                 <div style="background: #f8f9fa; padding: 15px; border-radius: 5px;">
-                    ${JSON.parse(order.items).map(item => `
-                        <div style="display: flex; justify-content: space-between; padding: 5px 0;">
-                            <span>${item.name}</span>
-                            <span>${item.quantity} × ${this.formatPrice(item.price)}</span>
-                        </div>
-                    `).join('')}
+                    ${this.renderOrderItems(order.items)}
                     <hr>
                     <div style="display: flex; justify-content: space-between; font-weight: bold;">
                         <span>Итого:</span>
@@ -420,7 +464,9 @@ class AdminApp {
             this.loadOrders();
             this.showNotification('Заказ успешно обновлен');
         } catch (error) {
-            this.showNotification('Ошибка обновления заказа', 'error');
+            console.error('updateOrder error:', error);
+            const msg = error && error.message ? error.message : 'Ошибка обновления заказа';
+            this.showNotification(msg, 'error');
         }
     }
 

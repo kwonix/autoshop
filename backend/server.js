@@ -37,6 +37,55 @@ const limiter = rateLimit({
 });
 app.use(limiter);
 
+// Utility: normalize features field from various form representations
+function normalizeFeatures(input) {
+    // Accept: undefined/null -> []
+    if (input === undefined || input === null) return [];
+
+    // If already an array, return shallow copy
+    if (Array.isArray(input)) return input.map(String).filter(Boolean);
+
+    // If it's an object (unexpected), try to stringify then parse
+    if (typeof input === 'object') {
+        try {
+            return Object.values(input).map(String).filter(Boolean);
+        } catch (e) {
+            return [];
+        }
+    }
+
+    // If it's a string: could be JSON array, CSV, or repeated-field flattened by client
+    const s = String(input).trim();
+    // Debug: help trace weird inputs during multipart handling
+    // no debug logging in production
+    if (!s) return [];
+
+    // Try JSON parse if it looks like JSON
+    if (s.startsWith('[') || s.startsWith('{')) {
+        try {
+            const parsed = JSON.parse(s);
+            if (Array.isArray(parsed)) return parsed.map(String).filter(Boolean);
+            // If object, take stringified values
+            if (typeof parsed === 'object' && parsed !== null) return Object.values(parsed).map(String).filter(Boolean);
+        } catch (e) {
+            // fallthrough to CSV parse
+        }
+    }
+
+    // CSV parse (commas) or space-separated
+    if (s.indexOf(',') !== -1) {
+        return s.split(',').map(x => x.trim()).filter(Boolean);
+    }
+
+    // If single value or space-separated
+    if (s.indexOf(' ') !== -1) {
+        return s.split(/\s+/).map(x => x.trim()).filter(Boolean);
+    }
+
+    // Single token
+    return [s];
+}
+
 // JWT middleware
 const authenticateToken = (req, res, next) => {
     const authHeader = req.headers['authorization'];
@@ -608,14 +657,28 @@ const storage = multer.diskStorage({
     }
 });
 
-const upload = multer({ storage });
+const upload = multer({ 
+    storage,
+    limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB max
+    fileFilter: (req, file, cb) => {
+        // allow only image/*
+        if (file && file.mimetype && file.mimetype.startsWith('image/')) return cb(null, true);
+        return cb(new Error('Invalid file type. Only image/* allowed'));
+    }
+});
 
 // Создать товар (поддерживает multipart/form-data с полем 'image')
 app.post('/api/admin/products', authenticateAdmin, upload.single('image'), async (req, res) => {
     try {
         // Когда используется multipart, multer положит поля в req.body
         const body = req.body || {};
-        const { name, description, price, category_id, image_url, stock, popular, features } = body;
+        const { name, description, price, category_id, image_url, stock, popular } = body;
+
+        // Gather features from common multipart variants
+        let featuresRaw = body.features;
+        if (!featuresRaw && body['features[]']) featuresRaw = body['features[]'];
+        // Normalize into array
+        const parsedFeatures = normalizeFeatures(featuresRaw);
 
         // Если был загружен файл, формируем image_url
         let finalImageUrl = image_url;
@@ -623,10 +686,25 @@ app.post('/api/admin/products', authenticateAdmin, upload.single('image'), async
             finalImageUrl = `/img/${req.file.filename}`;
         }
 
+        // Coerce numeric and boolean fields safely
+        const coercedPrice = (price === undefined || price === null || price === '') ? null : parseFloat(price);
+        const coercedCategoryId = (category_id === undefined || category_id === null || category_id === '') ? null : parseInt(category_id);
+        const coercedStock = (stock === undefined || stock === null || stock === '') ? null : parseInt(stock);
+        const coercedPopular = (popular === 'true' || popular === true || popular === '1' || popular === 1);
+
+    // Basic validation
+    if (!name || String(name).trim() === '') return res.status(400).json({ error: 'Product name is required' });
+    // price must be a finite number (not NaN/Infinity)
+    if (coercedPrice === null || !Number.isFinite(coercedPrice)) return res.status(400).json({ error: 'Price must be a finite number' });
+    // category_id must be an integer
+    if (coercedCategoryId === null || !Number.isInteger(coercedCategoryId)) return res.status(400).json({ error: 'category_id is required and must be an integer' });
+    // stock if provided must be a non-negative integer
+    if (coercedStock !== null && (!Number.isInteger(coercedStock) || coercedStock < 0)) return res.status(400).json({ error: 'stock must be a non-negative integer' });
+
         const result = await pool.query(
             `INSERT INTO products (name, description, price, category_id, image_url, stock, popular, features) 
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
-            [name, description, price, category_id, finalImageUrl, stock, popular === 'true' || popular === true, JSON.stringify(features ? JSON.parse(features) : [])]
+            [name, description, coercedPrice, coercedCategoryId, finalImageUrl, coercedStock, coercedPopular, JSON.stringify(parsedFeatures)]
         );
 
         res.status(201).json(result.rows[0]);
@@ -641,19 +719,39 @@ app.put('/api/admin/products/:id', authenticateAdmin, upload.single('image'), as
     try {
         const { id } = req.params;
         const body = req.body || {};
-        const { name, description, price, category_id, image_url, stock, popular, features, status } = body;
+        const { name, description, price, category_id, image_url, stock, popular, status } = body;
+
+        // Gather features
+        let featuresRaw = body.features;
+        if (!featuresRaw && body['features[]']) featuresRaw = body['features[]'];
+        const parsedFeaturesUp = normalizeFeatures(featuresRaw);
 
         let finalImageUrl = image_url;
         if (req.file) {
             finalImageUrl = `/img/${req.file.filename}`;
         }
 
+        // Coerce types
+        const coercedPrice = (price === undefined || price === null || price === '') ? null : parseFloat(price);
+        const coercedCategoryId = (category_id === undefined || category_id === null || category_id === '') ? null : parseInt(category_id);
+        const coercedStock = (stock === undefined || stock === null || stock === '') ? null : parseInt(stock);
+        const coercedPopular = (popular === 'true' || popular === true || popular === '1' || popular === 1);
+
+    // Basic validation
+    if (!name || String(name).trim() === '') return res.status(400).json({ error: 'Product name is required' });
+    // price must be a finite number (not NaN/Infinity)
+    if (coercedPrice === null || !Number.isFinite(coercedPrice)) return res.status(400).json({ error: 'Price must be a finite number' });
+    // category_id must be an integer
+    if (coercedCategoryId === null || !Number.isInteger(coercedCategoryId)) return res.status(400).json({ error: 'category_id is required and must be an integer' });
+    // stock if provided must be a non-negative integer
+    if (coercedStock !== null && (!Number.isInteger(coercedStock) || coercedStock < 0)) return res.status(400).json({ error: 'stock must be a non-negative integer' });
+
         const result = await pool.query(
             `UPDATE products 
              SET name = $1, description = $2, price = $3, category_id = $4, image_url = $5, 
                  stock = $6, popular = $7, features = $8, status = $9, updated_at = CURRENT_TIMESTAMP 
              WHERE id = $10 RETURNING *`,
-            [name, description, price, category_id, finalImageUrl, stock, popular === 'true' || popular === true, JSON.stringify(features ? JSON.parse(features) : []), status, id]
+            [name, description, coercedPrice, coercedCategoryId, finalImageUrl, coercedStock, coercedPopular, JSON.stringify(parsedFeaturesUp), status, id]
         );
 
         if (result.rows.length === 0) {
@@ -840,6 +938,20 @@ app.get('/api/health', async (req, res) => {
             error: error.message 
         });
     }
+});
+
+// Multer / upload error handler (user-friendly responses)
+app.use((err, req, res, next) => {
+    if (err) {
+        // Multer file size / file type errors
+        if (err instanceof multer.MulterError) {
+            return res.status(400).json({ error: err.message });
+        }
+        if (err.message && err.message.toLowerCase().includes('invalid file type')) {
+            return res.status(400).json({ error: err.message });
+        }
+    }
+    next(err);
 });
 
 // Получить заказы текущего аутентифицированного пользователя
