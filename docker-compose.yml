@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # PostgreSQL Database
   postgres:
@@ -7,19 +5,19 @@ services:
     container_name: autogadget-db
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-autogadget}
-      POSTGRES_USER: ${POSTGRES_USER:-autogadget_user}
+      POSTGRES_DB: ${POSTGRES_DB:-autoshop}
+      POSTGRES_USER: ${POSTGRES_USER:-autoshop_user}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme123}
     volumes:
-      - autogadget_postgres_data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data
       - ./backend/database/init.sql:/docker-entrypoint-initdb.d/01-init.sql
       - ./backend/database/migrations.sql:/docker-entrypoint-initdb.d/02-migrations.sql
     ports:
       - "5432:5432"
     networks:
-      - autogadget-network
+      - autoshop-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-autogadget_user}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-autoshop_user}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -39,15 +37,17 @@ services:
       PORT: 3000
       DB_HOST: postgres
       DB_PORT: 5432
-      DB_NAME: ${POSTGRES_DB:-autogadget}
-      DB_USER: ${POSTGRES_USER:-autogadget_user}
+      DB_NAME: ${POSTGRES_DB:-autoshop}
+      DB_USER: ${POSTGRES_USER:-autoshop_user}
       DB_PASSWORD: ${POSTGRES_PASSWORD:-changeme123}
       JWT_SECRET: ${JWT_SECRET:-your-super-secret-jwt-key-change-this}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
+    volumes:
+      - uploads:/app/frontend/img
     ports:
       - "3000:3000"
     networks:
-      - autogadget-network
+      - autoshop-network
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/api/health"]
       interval: 30s
@@ -68,9 +68,10 @@ services:
       - ./frontend:/usr/share/nginx/html/frontend:ro
       - ./admin:/usr/share/nginx/html/admin:ro
       - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - uploads:/usr/share/nginx/html/frontend/img
       - nginx_logs:/var/log/nginx
     networks:
-      - autogadget-network
+      - autoshop-network
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/"]
       interval: 30s
@@ -78,11 +79,13 @@ services:
       retries: 3
 
 volumes:
-  autogadget_postgres_data:
+  postgres_data:
+    driver: local
+  uploads:
     driver: local
   nginx_logs:
     driver: local
 
 networks:
-  autogadget-network:
+  autoshop-network:
     driver: bridge

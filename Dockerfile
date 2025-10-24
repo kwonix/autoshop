@@ -18,10 +18,15 @@ COPY backend/ ./
 # Remove build dependencies to reduce image size
 RUN apk del python3 make g++
 
+# Create uploads directory with proper permissions
+RUN mkdir -p /app/frontend/img && chmod -R 777 /app/frontend/img
+
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs && \
-    adduser -S nodejs -u 1001 && \
-    chown -R nodejs:nodejs /app/backend
+    adduser -S nodejs -u 1001
+
+# Change ownership of app directory to nodejs user
+RUN chown -R nodejs:nodejs /app
 
 USER nodejs
 
