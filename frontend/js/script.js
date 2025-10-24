@@ -157,8 +157,9 @@ class CartManager {
         this.saveCart();
         this.updateCartCount();
         
-        if (window.location.pathname.endsWith('cart.html')) {
-            this.renderCart();
+        // Trigger cart re-render if on cart page
+        if (window.cartApp && typeof window.cartApp.renderCart === 'function') {
+            window.cartApp.renderCart();
         }
     }
 
@@ -173,8 +174,9 @@ class CartManager {
             item.quantity = newQuantity;
             this.saveCart();
             
-            if (window.location.pathname.endsWith('cart.html')) {
-                this.renderCart();
+            // Trigger cart re-render if on cart page
+            if (window.cartApp && typeof window.cartApp.renderCart === 'function') {
+                window.cartApp.renderCart();
             }
         }
     }
@@ -208,14 +210,20 @@ class CartManager {
             const cleanedOrderData = Object.assign({}, orderData);
             if (cleanedOrderData._headers) delete cleanedOrderData._headers;
 
+            // Убеждаемся, что все обязательные поля присутствуют
+            const orderPayload = {
+                customer_name: cleanedOrderData.customer_name || '',
+                customer_email: cleanedOrderData.customer_email || '',
+                customer_phone: cleanedOrderData.customer_phone || '',
+                customer_address: cleanedOrderData.customer_address || '',
+                items: this.items,
+                total_amount: this.getTotalPrice()
+            };
+
             const order = await Components.apiCall('/orders', {
                 method: 'POST',
                 headers: extraHeaders,
-                body: {
-                    ...cleanedOrderData,
-                    items: this.items,
-                    total_amount: this.getTotalPrice()
-                }
+                body: orderPayload
             });
 
             // Очищаем корзину после успешного заказа
