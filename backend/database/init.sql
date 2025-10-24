@@ -205,13 +205,13 @@ ON CONFLICT (slug) DO NOTHING;
 
 -- Администратор по умолчанию (password: admin123)
 -- Hash generated with: bcrypt.hash('admin123', 10)
-INSERT INTO admin_users (email, password_hash, name, role) VALUES 
-('admin@autogadget.ru', '$2a$10$XYZ.dummyhash.replaceWithRealHashOnFirstRun', 'Администратор', 'admin')
+INSERT INTO admin_users (email, password_hash, name, role) VALUES
+('admin@autogadget.ru', '$2a$10$sQcWJezH50iSJFrNYX2/UOaZcLbk60HM9i8wVEHs69Typ3lIadZhW', 'Администратор', 'admin')
 ON CONFLICT (email) DO NOTHING;
 
 -- Тестовый пользователь (password: user123)
-INSERT INTO users (email, password_hash, full_name, phone) VALUES 
-('user@example.com', '$2a$10$XYZ.dummyhash.replaceWithRealHashOnFirstRun', 'Тестовый Пользователь', '+79991234567')
+INSERT INTO users (email, password_hash, full_name, phone) VALUES
+('user@example.com', '$2a$10$UtVd.B9obQ5Bd2/uGFUd1eYP6C/xI2kMWNfw7NZYTz0HhmqZ/e4yi', 'Тестовый Пользователь', '+79991234567')
 ON CONFLICT (email) DO NOTHING;
 
 -- Email шаблоны по умолчанию
