@@ -110,11 +110,10 @@ class ShopApp {
     setupAuthCheck() {
         const token = localStorage.getItem('user_token');
         if (token) {
-            // Обновляем интерфейс для авторизованного пользователя
             const loginBtn = document.querySelector('.login-btn');
             if (loginBtn) {
                 loginBtn.textContent = '👤 Кабинет';
-                loginBtn.href = 'account.html'; // Перенаправляем на страницу кабинета
+                loginBtn.href = 'account.html';
             }
         }
     }
@@ -126,7 +125,6 @@ class CartManager {
     }
 
     addToCart(productId, quantity = 1) {
-        // В реальном приложении здесь был бы запрос к API для получения данных товара
         const product = this.getProductData(productId);
         if (!product) {
             Components.showNotification('Товар не найден', 'error');
@@ -157,7 +155,6 @@ class CartManager {
         this.saveCart();
         this.updateCartCount();
         
-        // Trigger cart re-render if on cart page
         if (window.cartApp && typeof window.cartApp.renderCart === 'function') {
             window.cartApp.renderCart();
         }
@@ -174,7 +171,6 @@ class CartManager {
             item.quantity = newQuantity;
             this.saveCart();
             
-            // Trigger cart re-render if on cart page
             if (window.cartApp && typeof window.cartApp.renderCart === 'function') {
                 window.cartApp.renderCart();
             }
@@ -204,18 +200,15 @@ class CartManager {
 
     async checkout(orderData) {
         try {
-            // Если caller передал дополнительные заголовки (например, Authorization), используем их
             const extraHeaders = orderData && orderData._headers ? orderData._headers : {};
-            // Убираем служебное поле _headers из тела запроса
             const cleanedOrderData = Object.assign({}, orderData);
             if (cleanedOrderData._headers) delete cleanedOrderData._headers;
 
-            // Убеждаемся, что все обязательные поля присутствуют
             const orderPayload = {
-                customer_name: cleanedOrderData.customer_name || '',
-                customer_email: cleanedOrderData.customer_email || '',
-                customer_phone: cleanedOrderData.customer_phone || '',
-                customer_address: cleanedOrderData.customer_address || '',
+                customer_name: String(cleanedOrderData.customer_name || ''),
+                customer_email: String(cleanedOrderData.customer_email || ''),
+                customer_phone: String(cleanedOrderData.customer_phone || ''),
+                customer_address: String(cleanedOrderData.customer_address || ''),
                 items: this.items,
                 total_amount: this.getTotalPrice()
             };
@@ -226,7 +219,6 @@ class CartManager {
                 body: orderPayload
             });
 
-            // Очищаем корзину после успешного заказа
             this.items = [];
             this.saveCart();
             this.updateCartCount();
@@ -237,7 +229,6 @@ class CartManager {
         }
     }
 
-    // Временный метод для демо - в реальном приложении данные брались бы с сервера
     getProductData(productId) {
         const productsData = {
             1: { id: 1, name: 'Видеорегистратор 4K', price: 5990, image_url: 'https://images.unsplash.com/photo-1606144042614-b2417e99c4e3' },
@@ -254,7 +245,6 @@ class CartManager {
     }
 }
 
-// Инициализация приложения
 document.addEventListener('DOMContentLoaded', function() {
     window.shopApp = new ShopApp();
     window.CartManager = CartManager;

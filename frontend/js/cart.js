@@ -87,8 +87,6 @@ class CartApp {
             return;
         }
 
-        // Заполняем форму данными пользователя, если он авторизован
-        // Получаем профиль с сервера (не используем localStorage для профиля)
         (async () => {
             try {
                 const userData = await this.getUserData();
@@ -114,7 +112,6 @@ class CartApp {
         const token = localStorage.getItem('user_token');
         if (token) {
             try {
-                // Получаем профиль с сервера
                 return Components.apiCall('/auth/profile', {
                     method: 'GET',
                     headers: {
@@ -129,14 +126,18 @@ class CartApp {
     }
 
     async processCheckout() {
+        const nameEl = document.getElementById('customer-name');
+        const emailEl = document.getElementById('customer-email');
+        const phoneEl = document.getElementById('customer-phone');
+        const addressEl = document.getElementById('customer-address');
+
         const formData = {
-            customer_name: document.getElementById('customer-name').value,
-            customer_email: document.getElementById('customer-email').value,
-            customer_phone: document.getElementById('customer-phone').value,
-            customer_address: document.getElementById('customer-address').value
+            customer_name: nameEl ? nameEl.value.trim() : '',
+            customer_email: emailEl ? emailEl.value.trim() : '',
+            customer_phone: phoneEl ? phoneEl.value.trim() : '',
+            customer_address: addressEl ? addressEl.value.trim() : ''
         };
 
-        // Валидация
         if (!formData.customer_name || !formData.customer_email || !formData.customer_phone) {
             Components.showNotification('Заполните все обязательные поля', 'error');
             return;
@@ -149,7 +150,6 @@ class CartApp {
         submitBtn.disabled = true;
 
         try {
-            // Перед отправкой заказа передаём Authorization при наличии токена
             const token = localStorage.getItem('user_token');
             const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
 
@@ -159,7 +159,6 @@ class CartApp {
             this.closeCheckoutModal();
             this.renderCart();
 
-            // Перенаправляем на страницу успеха или очищаем корзину
             setTimeout(() => {
                 window.location.href = 'index.html';
             }, 2000);
@@ -173,7 +172,6 @@ class CartApp {
     }
 }
 
-// Инициализация корзины
 document.addEventListener('DOMContentLoaded', function() {
     window.cartApp = new CartApp();
 });

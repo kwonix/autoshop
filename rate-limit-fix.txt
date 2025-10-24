@@ -1,0 +1,7 @@
+// Rate limiting - increased for development
+const limiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 1000, // increased to 1000 requests per 15 minutes
+    message: { error: 'Слишком много запросов, попробуйте позже' }
+});
+app.use(limiter);

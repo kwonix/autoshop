@@ -102,8 +102,6 @@ class Components {
         }).format(price);
     }
 
-    // Обновляет счётчик корзины, читая данные из localStorage.
-    // Используется как безопасный fallback до загрузки script.js/CartManager.
     static updateCartCount() {
         try {
             const items = JSON.parse(localStorage.getItem('cart')) || [];
@@ -119,11 +117,11 @@ class Components {
         const url = `${baseURL}${endpoint}`;
         
         const config = {
+            ...options,
             headers: {
                 'Content-Type': 'application/json',
-                ...options.headers
-            },
-            ...options
+                ...(options.headers || {})
+            }
         };
 
         if (config.body && typeof config.body === 'object') {
@@ -132,10 +130,16 @@ class Components {
 
         try {
             const response = await fetch(url, config);
-            const data = await response.json();
+            
+            let data;
+            try {
+                data = await response.json();
+            } catch (e) {
+                data = await response.text();
+            }
 
             if (!response.ok) {
-                throw new Error(data.error || 'Ошибка сервера');
+                throw new Error(data.error || data || 'Ошибка сервера');
             }
 
             return data;
@@ -148,18 +152,15 @@ class Components {
 
 // Загрузка компонентов при загрузке страницы
 document.addEventListener('DOMContentLoaded', function() {
-    // Загружаем header
     const headerContainer = document.getElementById('header-container');
     if (headerContainer) {
         headerContainer.innerHTML = Components.header();
     }
 
-    // Загружаем footer
     const footerContainer = document.getElementById('footer-container');
     if (footerContainer) {
         footerContainer.innerHTML = Components.footer();
     }
 
-    // Обновляем счетчик корзины (безопасный fallback)
     Components.updateCartCount();
 });
