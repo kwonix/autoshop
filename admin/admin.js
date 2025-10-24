@@ -902,8 +902,13 @@ class AdminApp {
 
     // === MESSAGES ===
     async loadMessages() {
-        const messages = await this.apiCall('/messages');
+        const status = document.getElementById('message-status-filter')?.value || 'all';
+        const messages = await this.apiCall(`/messages?status=${status}`);
         this.renderMessages(messages);
+    }
+
+    async filterMessages() {
+        await this.loadMessages();
     }
 
     renderMessages(messages) {
