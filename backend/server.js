@@ -627,6 +627,24 @@ app.put('/api/admin/orders/:id', authenticateAdmin, async (req, res) => {
     }
 });
 
+// Удалить заказ
+app.delete('/api/admin/orders/:id', authenticateAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+        
+        const result = await pool.query('DELETE FROM orders WHERE id = $1 RETURNING *', [id]);
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Заказ не найден' });
+        }
+
+        res.json({ message: 'Заказ успешно удален' });
+    } catch (error) {
+        console.error('Error deleting order:', error);
+        res.status(500).json({ error: 'Ошибка удаления заказа' });
+    }
+});
+
 // Получить товары для админки
 app.get('/api/admin/products', authenticateAdmin, async (req, res) => {
     try {
@@ -801,13 +819,19 @@ app.get('/api/admin/categories', authenticateAdmin, async (req, res) => {
 });
 
 // Создать категорию
-app.post('/api/admin/categories', authenticateAdmin, async (req, res) => {
+app.post('/api/admin/categories', authenticateAdmin, upload.single('image'), async (req, res) => {
     try {
-        const { name, description, slug, image_url } = req.body;
+        const body = req.body || {};
+        const { name, description, slug, image_url } = body;
+        
+        let finalImageUrl = image_url;
+        if (req.file) {
+            finalImageUrl = `/img/${req.file.filename}`;
+        }
         
         const result = await pool.query(
             'INSERT INTO categories (name, description, slug, image_url) VALUES ($1, $2, $3, $4) RETURNING *',
-            [name, description, slug, image_url]
+            [name, description, slug, finalImageUrl]
         );
 
         res.status(201).json(result.rows[0]);
@@ -818,14 +842,20 @@ app.post('/api/admin/categories', authenticateAdmin, async (req, res) => {
 });
 
 // Обновить категорию
-app.put('/api/admin/categories/:id', authenticateAdmin, async (req, res) => {
+app.put('/api/admin/categories/:id', authenticateAdmin, upload.single('image'), async (req, res) => {
     try {
         const { id } = req.params;
-        const { name, description, slug, image_url } = req.body;
+        const body = req.body || {};
+        const { name, description, slug, image_url } = body;
+
+        let finalImageUrl = image_url;
+        if (req.file) {
+            finalImageUrl = `/img/${req.file.filename}`;
+        }
 
         const result = await pool.query(
             `UPDATE categories SET name = $1, description = $2, slug = $3, image_url = $4, updated_at = CURRENT_TIMESTAMP WHERE id = $5 RETURNING *`,
-            [name, description, slug, image_url, id]
+            [name, description, slug, finalImageUrl, id]
         );
 
         if (result.rows.length === 0) return res.status(404).json({ error: 'Категория не найдена' });
@@ -834,6 +864,37 @@ app.put('/api/admin/categories/:id', authenticateAdmin, async (req, res) => {
     } catch (error) {
         console.error('Error updating category:', error);
         res.status(500).json({ error: 'Ошибка обновления категории' });
+    }
+});
+
+// Удалить категорию
+app.delete('/api/admin/categories/:id', authenticateAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+        
+        // Check if category has products
+        const productsCheck = await pool.query(
+            'SELECT COUNT(*) FROM products WHERE category_id = $1',
+            [id]
+        );
+        
+        const productCount = parseInt(productsCheck.rows[0].count);
+        if (productCount > 0) {
+            return res.status(400).json({ 
+                error: `Невозможно удалить категорию. В ней содержится ${productCount} товар(ов). Сначала удалите или переместите товары.` 
+            });
+        }
+        
+        const result = await pool.query('DELETE FROM categories WHERE id = $1 RETURNING *', [id]);
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Категория не найдена' });
+        }
+
+        res.json({ message: 'Категория успешно удалена' });
+    } catch (error) {
+        console.error('Error deleting category:', error);
+        res.status(500).json({ error: 'Ошибка удаления категории' });
     }
 });
 

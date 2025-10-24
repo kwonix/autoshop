@@ -158,18 +158,20 @@ class AdminApp {
         try {
             const response = await fetch(`/api/admin${endpoint}`, config);
 
+            // Clone response before reading to avoid "body stream already read" error
+            const responseClone = response.clone();
+            
             // Try to parse JSON, but fall back to text for non-JSON responses
             let data;
             try {
                 data = await response.json();
             } catch (parseErr) {
-                data = await response.text();
+                data = await responseClone.text();
             }
 
             if (!response.ok) {
                 // If unauthorized or forbidden, clear local auth and redirect to login
                 if (response.status === 401 || response.status === 403) {
-                    // Try to surface server message, then logout
                     const serverMessage = (data && typeof data === 'object' && data.error) ? data.error : String(data || 'Доступ запрещен');
                     console.error('API call unauthorized/forbidden', { endpoint, status: response.status, response: data });
                     this.showNotification(serverMessage, 'error');
@@ -372,7 +374,7 @@ class AdminApp {
     async viewOrder(orderId, isEdit = false) {
         try {
             const orders = await this.apiCall('/orders');
-            const order = orders.find(o => o.id === orderId);
+            const order = orders.find(o => o.id == orderId); // Use == for type coercion
 
             if (!order) {
                 this.showNotification('Заказ не найден', 'error');
@@ -434,6 +436,7 @@ class AdminApp {
         
         const modalActions = isEdit ? `
             <button class="btn btn-primary" onclick="adminApp.updateOrder(${order.id})">Сохранить изменения</button>
+            <button class="btn btn-danger" onclick="adminApp.deleteOrder(${order.id})" style="margin-left: auto;">Удалить заказ</button>
             <button class="btn btn-secondary" onclick="adminApp.closeModal()">Отмена</button>
         ` : `
             <button class="btn btn-primary" onclick="adminApp.editOrder(${order.id})">Редактировать</button>
@@ -443,10 +446,10 @@ class AdminApp {
         this.showModal(modalContent, modalActions);
     }
 
-    editOrder(orderId) {
+    async editOrder(orderId) {
         this.closeModal();
-        setTimeout(() => {
-            this.viewOrder(orderId, true);
+        setTimeout(async () => {
+            await this.viewOrder(orderId, true);
         }, 300);
     }
 
@@ -466,6 +469,26 @@ class AdminApp {
         } catch (error) {
             console.error('updateOrder error:', error);
             const msg = error && error.message ? error.message : 'Ошибка обновления заказа';
+            this.showNotification(msg, 'error');
+        }
+    }
+
+    async deleteOrder(orderId) {
+        if (!confirm('Вы уверены, что хотите удалить этот заказ? Это действие нельзя отменить.')) {
+            return;
+        }
+
+        try {
+            await this.apiCall(`/orders/${orderId}`, {
+                method: 'DELETE'
+            });
+
+            this.closeModal();
+            this.loadOrders();
+            this.showNotification('Заказ успешно удален');
+        } catch (error) {
+            console.error('deleteOrder error:', error);
+            const msg = error && error.message ? error.message : 'Ошибка удаления заказа';
             this.showNotification(msg, 'error');
         }
     }
@@ -512,6 +535,9 @@ class AdminApp {
                     </span>
                 </td>
                 <td>
+                    <button class="btn-action btn-view" onclick="adminApp.viewProduct(${product.id})">
+                        👁️
+                    </button>
                     <button class="btn-action btn-edit" onclick="adminApp.editProduct(${product.id})">
                         ✏️
                     </button>
@@ -523,76 +549,180 @@ class AdminApp {
         `).join('');
     }
 
-    showProductModal(product = null) {
-        const isEdit = !!product;
-        
-        const modalContent = `
-            <h2>${isEdit ? 'Редактирование' : 'Добавление'} товара</h2>
+    async viewProduct(productId) {
+        try {
+            const products = await this.apiCall('/products');
+            const product = products.find(p => p.id == productId);
             
-            <form id="product-form">
-                <div class="form-group">
-                    <label for="product-name">Название товара *</label>
-                    <input type="text" id="product-name" value="${product?.name || ''}" required>
+            if (!product) {
+                this.showNotification('Товар не найден', 'error');
+                return;
+            }
+            
+            this.showProductModal(product, false);
+        } catch (error) {
+            console.error('viewProduct error:', error);
+            this.showNotification('Ошибка загрузки товара', 'error');
+        }
+    }
+
+    showProductModal(product = null, isEdit = true) {
+        const modalContent = `
+            <h2>${product && !isEdit ? 'Просмотр товара' : (product ? 'Редактирование товара' : 'Добавление товара')}</h2>
+            
+            ${!isEdit && product ? `
+                <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 30px; margin-bottom: 20px;">
+                    <div>
+                        <img src="${product.image_url}" alt="${product.name}" 
+                             style="width: 100%; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+                        <div style="margin-top: 15px; text-align: center;">
+                            <span class="status-badge ${product.status === 'active' ? 'status-delivered' : 'status-cancelled'}">
+                                ${product.status === 'active' ? 'Активен' : 'Неактивен'}
+                            </span>
+                            ${product.popular ? '<span class="status-badge" style="background: #ff9800; margin-left: 5px;">Популярный</span>' : ''}
+                        </div>
+                    </div>
+                    <div>
+                        <h3 style="margin: 0 0 10px 0; color: var(--primary-color);">${product.name}</h3>
+                        <p style="color: #666; margin-bottom: 20px;">${product.description}</p>
+                        
+                        <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                                <div>
+                                    <label style="color: #666; font-size: 0.9rem;">Цена</label>
+                                    <div style="font-size: 1.8rem; font-weight: bold; color: var(--primary-color);">
+                                        ${this.formatPrice(product.price)}
+                                    </div>
+                                </div>
+                                <div>
+                                    <label style="color: #666; font-size: 0.9rem;">На складе</label>
+                                    <div style="font-size: 1.8rem; font-weight: bold; color: ${product.stock > 10 ? 'var(--success-color)' : 'var(--warning-color)'};">
+                                        ${product.stock} шт.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div style="margin-bottom: 15px;">
+                            <label style="font-weight: 600; color: var(--dark-color); margin-bottom: 8px; display: block;">Категория</label>
+                            <div style="color: #666;">${product.category_name || 'Не указана'}</div>
+                        </div>
+                        
+                        ${product.features && this.parseFeatures(product.features).length > 0 ? `
+                            <div>
+                                <label style="font-weight: 600; color: var(--dark-color); margin-bottom: 8px; display: block;">Характеристики</label>
+                                <ul style="list-style: none; padding: 0; margin: 0;">
+                                    ${this.parseFeatures(product.features).map(f => `
+                                        <li style="padding: 8px 0; border-bottom: 1px solid #e0e0e0;">
+                                            <span style="color: #666;">✓ ${f}</span>
+                                        </li>
+                                    `).join('')}
+                                </ul>
+                            </div>
+                        ` : ''}
+                    </div>
                 </div>
-                
-                <div class="form-group">
-                    <label for="product-description">Описание *</label>
-                    <textarea id="product-description" required>${product?.description || ''}</textarea>
-                </div>
-                
-                <div class="form-group">
-                    <label for="product-category">Категория *</label>
-                    <select id="product-category" required>
-                        <option value="">Выберите категорию</option>
-                    </select>
-                </div>
-                
-                <div class="form-group">
-                    <label for="product-price">Цена (₽) *</label>
-                    <input type="number" id="product-price" value="${product?.price || ''}" step="0.01" min="0" required>
-                </div>
-                
-                <div class="form-group">
-                    <label for="product-stock">Количество на складе *</label>
-                    <input type="number" id="product-stock" value="${product?.stock || ''}" min="0" required>
-                </div>
-                
-                <div class="form-group">
-                    <label for="product-image">URL изображения или загрузить файл</label>
-                    <input type="url" id="product-image" value="${product?.image_url || ''}" placeholder="https://...">
-                    <input type="file" id="product-image-file" accept="image/*" style="margin-top:8px;">
-                </div>
-                
-                <div class="form-group">
-                    <label for="product-features">Характеристики (каждая с новой строки)</label>
-                    <textarea id="product-features">${product?.features ? JSON.parse(product.features).join('\n') : ''}</textarea>
-                </div>
-                
-                <div class="form-group">
-                    <label>
-                        <input type="checkbox" id="product-popular" ${product?.popular ? 'checked' : ''}>
-                        Популярный товар
-                    </label>
-                </div>
-                
-                <div class="form-group">
-                    <label>
-                        <input type="checkbox" id="product-active" ${!product || product.status === 'active' ? 'checked' : ''}>
-                        Активный товар
-                    </label>
-                </div>
-            </form>
+            ` : `
+                <form id="product-form">
+                    <div class="form-group">
+                        <label for="product-name">Название товара *</label>
+                        <input type="text" id="product-name" value="${product?.name || ''}" required ${!isEdit ? 'disabled' : ''}>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="product-description">Описание *</label>
+                        <textarea id="product-description" required ${!isEdit ? 'disabled' : ''}>${product?.description || ''}</textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="product-category">Категория *</label>
+                        <select id="product-category" required ${!isEdit ? 'disabled' : ''}>
+                            <option value="">Выберите категорию</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="product-price">Цена (₽) *</label>
+                        <input type="number" id="product-price" value="${product?.price || ''}" step="0.01" min="0" required ${!isEdit ? 'disabled' : ''}>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="product-stock">Количество на складе *</label>
+                        <input type="number" id="product-stock" value="${product?.stock || ''}" min="0" required ${!isEdit ? 'disabled' : ''}>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="product-image">URL изображения или загрузить файл</label>
+                        <input type="url" id="product-image" value="${product?.image_url || ''}" placeholder="https://..." ${!isEdit ? 'disabled' : ''}>
+                        ${isEdit ? '<input type="file" id="product-image-file" accept="image/*" style="margin-top:8px;">' : ''}
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="product-features">Характеристики (каждая с новой строки)</label>
+                        <textarea id="product-features" ${!isEdit ? 'disabled' : ''}>${this.getProductFeatures(product)}</textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="product-popular" ${product?.popular ? 'checked' : ''} ${!isEdit ? 'disabled' : ''}>
+                            Популярный товар
+                        </label>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="product-active" ${!product || product.status === 'active' ? 'checked' : ''} ${!isEdit ? 'disabled' : ''}>
+                            Активный товар
+                        </label>
+                    </div>
+                </form>
+            `}
         `;
         
-        const modalActions = `
-            <button class="btn btn-primary" onclick="adminApp.${isEdit ? 'update' : 'create'}Product(${product?.id || ''})">
-                ${isEdit ? 'Сохранить' : 'Создать'}
+        const modalActions = !isEdit && product ? `
+            <button class="btn btn-primary" onclick="adminApp.editProductFromView(${product.id})">Редактировать</button>
+            <button class="btn btn-danger" onclick="adminApp.deleteProduct(${product.id})" style="margin-left: auto;">Удалить</button>
+            <button class="btn btn-secondary" onclick="adminApp.closeModal()">Закрыть</button>
+        ` : `
+            <button class="btn btn-primary" onclick="adminApp.${product ? 'update' : 'create'}Product(${product?.id || ''})">
+                ${product ? 'Сохранить' : 'Создать'}
             </button>
             <button class="btn btn-secondary" onclick="adminApp.closeModal()">Отмена</button>
         `;
         
         this.showModal(modalContent, modalActions);
-        this.loadCategoriesForSelect();
+        if (isEdit || product) {
+            this.loadCategoriesForSelect();
+            if (product) {
+                setTimeout(() => {
+                    const categorySelect = document.getElementById('product-category');
+                    if (categorySelect && product.category_id) {
+                        categorySelect.value = product.category_id;
+                    }
+                }, 100);
+            }
+        }
+    }
+
+    parseFeatures(features) {
+        if (!features) return [];
+        try {
+            if (Array.isArray(features)) return features;
+            if (typeof features === 'string') {
+                const parsed = JSON.parse(features);
+                return Array.isArray(parsed) ? parsed : [];
+            }
+            return [];
+        } catch (error) {
+            return [];
+        }
+    }
+
+    async editProductFromView(productId) {
+        this.closeModal();
+        setTimeout(async () => {
+            await this.editProduct(productId);
+        }, 300);
     }
 
     async loadCategoriesForSelect() {
@@ -720,15 +850,45 @@ class AdminApp {
         };
     }
 
+    getProductFeatures(product) {
+        if (!product || !product.features) return '';
+        
+        try {
+            // If it's already an array
+            if (Array.isArray(product.features)) {
+                return product.features.join('\n');
+            }
+            
+            // If it's a JSON string
+            if (typeof product.features === 'string') {
+                const parsed = JSON.parse(product.features);
+                if (Array.isArray(parsed)) {
+                    return parsed.join('\n');
+                }
+                // If it's just a plain string, return it
+                return product.features;
+            }
+            
+            return '';
+        } catch (error) {
+            console.warn('Could not parse product features:', error);
+            // If JSON parsing fails, return the raw string
+            return typeof product.features === 'string' ? product.features : '';
+        }
+    }
+
     async editProduct(productId) {
         try {
             const products = await this.apiCall('/products');
-            const product = products.find(p => p.id === productId);
+            const product = products.find(p => p.id == productId); // Use == for type coercion
             
             if (product) {
-                this.showProductModal(product);
+                this.showProductModal(product, true);
+            } else {
+                this.showNotification('Товар не найден', 'error');
             }
         } catch (error) {
+            console.error('editProduct error:', error);
             this.showNotification('Ошибка загрузки товара', 'error');
         }
     }
@@ -840,17 +1000,19 @@ class AdminApp {
                     <textarea id="category-description">${category?.description || ''}</textarea>
                 </div>
                 <div class="form-group">
-                    <label for="category-image">URL изображения</label>
-                    <input type="url" id="category-image" value="${category?.image_url || ''}">
+                    <label for="category-image">URL изображения или загрузить файл</label>
+                    <input type="url" id="category-image" value="${category?.image_url || ''}" placeholder="https://...">
+                    <input type="file" id="category-image-file" accept="image/*" style="margin-top:8px;">
                 </div>
             </form>
         `;
 
         const modalActions = isEdit ? `
-            <button class="btn btn-primary" onclick="adminApp.createCategory(${category.id})">Сохранить</button>
+            <button class="btn btn-primary" onclick="adminApp.saveCategory(${category.id})">Сохранить</button>
+            <button class="btn btn-danger" onclick="adminApp.deleteCategory(${category.id})" style="margin-left: auto;">Удалить категорию</button>
             <button class="btn btn-secondary" onclick="adminApp.closeModal()">Отмена</button>
         ` : `
-            <button class="btn btn-primary" onclick="adminApp.createCategory()">Создать</button>
+            <button class="btn btn-primary" onclick="adminApp.saveCategory()">Создать</button>
             <button class="btn btn-secondary" onclick="adminApp.closeModal()">Отмена</button>
         `;
 
@@ -868,28 +1030,57 @@ class AdminApp {
         }
     }
 
-    async createCategory(categoryId = null) {
+    async saveCategory(categoryId = null) {
         try {
-            const name = document.getElementById('category-name').value;
-            const slug = document.getElementById('category-slug').value;
-            const description = document.getElementById('category-description').value;
-            const image_url = document.getElementById('category-image').value;
+            const fileInput = document.getElementById('category-image-file');
+            const token = localStorage.getItem('admin_token');
 
-            if (!name) return this.showNotification('Название обязательно', 'error');
+            if (fileInput && fileInput.files && fileInput.files.length > 0) {
+                // Upload with file
+                const fd = new FormData();
+                fd.append('name', document.getElementById('category-name').value);
+                fd.append('slug', document.getElementById('category-slug').value);
+                fd.append('description', document.getElementById('category-description').value);
+                fd.append('image_url', document.getElementById('category-image').value);
+                fd.append('image', fileInput.files[0]);
 
-            if (categoryId) {
-                // try to update (server may not have PUT; use POST fallback)
-                const res = await fetch(`/api/admin/categories/${categoryId}`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('admin_token')}` },
-                    body: JSON.stringify({ name, slug, description, image_url })
+                const url = categoryId ? `/api/admin/categories/${categoryId}` : '/api/admin/categories';
+                const method = categoryId ? 'PUT' : 'POST';
+
+                const res = await fetch(url, {
+                    method: method,
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: fd
                 });
-                if (!res.ok) throw new Error((await res.json()).error || 'Ошибка обновления категории');
+
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({}));
+                    throw new Error(err.error || 'Ошибка сохранения категории');
+                }
             } else {
-                await this.apiCall('/categories', {
-                    method: 'POST',
-                    body: { name, slug, description, image_url }
-                });
+                // Upload without file
+                const name = document.getElementById('category-name').value;
+                const slug = document.getElementById('category-slug').value;
+                const description = document.getElementById('category-description').value;
+                const image_url = document.getElementById('category-image').value;
+
+                if (!name) return this.showNotification('Название обязательно', 'error');
+
+                if (categoryId) {
+                    const res = await fetch(`/api/admin/categories/${categoryId}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                        body: JSON.stringify({ name, slug, description, image_url })
+                    });
+                    if (!res.ok) throw new Error((await res.json()).error || 'Ошибка обновления категории');
+                } else {
+                    await this.apiCall('/categories', {
+                        method: 'POST',
+                        body: { name, slug, description, image_url }
+                    });
+                }
             }
 
             this.closeModal();
@@ -897,6 +1088,24 @@ class AdminApp {
             this.showNotification(categoryId ? 'Категория обновлена' : 'Категория создана');
         } catch (error) {
             this.showNotification(error.message || 'Ошибка сохранения категории', 'error');
+        }
+    }
+
+    async deleteCategory(categoryId) {
+        if (!confirm('Вы уверены, что хотите удалить эту категорию? Все товары в этой категории могут быть затронуты.')) {
+            return;
+        }
+
+        try {
+            await this.apiCall(`/categories/${categoryId}`, {
+                method: 'DELETE'
+            });
+
+            this.closeModal();
+            this.loadCategories();
+            this.showNotification('Категория успешно удалена');
+        } catch (error) {
+            this.showNotification(error.message || 'Ошибка удаления категории', 'error');
         }
     }
 
