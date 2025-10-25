@@ -27,10 +27,10 @@ class ShopApp {
 
         container.innerHTML = categories.map(category => `
             <div class="category-card" onclick="window.location='catalog.html?category=${category.slug}'">
-                <div class="category-img" style="background-image: url('${category.image_url}')"></div>
+                <div class="category-img" style="background-image: url('${category.image_url || 'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7'}')"></div>
                 <div class="category-info">
                     <h3>${category.name}</h3>
-                    <p>${category.description}</p>
+                    <p>${category.description || ''}</p>
                     <button class="btn btn-outline">Смотреть товары</button>
                 </div>
             </div>
@@ -57,7 +57,7 @@ class ShopApp {
 
         container.innerHTML = products.map(product => `
             <div class="product-card">
-                <div class="product-img" style="background-image: url('${product.image_url}')"></div>
+                <div class="product-img" style="background-image: url('${product.image_url || 'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7'}')"></div>
                 <div class="product-info">
                     <h3>${product.name}</h3>
                     <p>${product.description}</p>
@@ -119,133 +119,6 @@ class ShopApp {
     }
 }
 
-class CartManager {
-    constructor() {
-        this.items = JSON.parse(localStorage.getItem('cart')) || [];
-    }
-
-    addToCart(productId, quantity = 1) {
-        const product = this.getProductData(productId);
-        if (!product) {
-            Components.showNotification('Товар не найден', 'error');
-            return;
-        }
-
-        const existingItem = this.items.find(item => item.id === productId);
-        
-        if (existingItem) {
-            existingItem.quantity += quantity;
-        } else {
-            this.items.push({
-                id: product.id,
-                name: product.name,
-                price: product.price,
-                image: product.image_url,
-                quantity: quantity
-            });
-        }
-
-        this.saveCart();
-        this.updateCartCount();
-        Components.showNotification('Товар добавлен в корзину!');
-    }
-
-    removeFromCart(productId) {
-        this.items = this.items.filter(item => item.id !== productId);
-        this.saveCart();
-        this.updateCartCount();
-        
-        if (window.cartApp && typeof window.cartApp.renderCart === 'function') {
-            window.cartApp.renderCart();
-        }
-    }
-
-    updateQuantity(productId, newQuantity) {
-        if (newQuantity < 1) {
-            this.removeFromCart(productId);
-            return;
-        }
-
-        const item = this.items.find(item => item.id === productId);
-        if (item) {
-            item.quantity = newQuantity;
-            this.saveCart();
-            
-            if (window.cartApp && typeof window.cartApp.renderCart === 'function') {
-                window.cartApp.renderCart();
-            }
-        }
-    }
-
-    getTotalPrice() {
-        return this.items.reduce((total, item) => total + (item.price * item.quantity), 0);
-    }
-
-    getTotalItems() {
-        return this.items.reduce((total, item) => total + item.quantity, 0);
-    }
-
-    saveCart() {
-        localStorage.setItem('cart', JSON.stringify(this.items));
-    }
-
-    updateCartCount() {
-        const cartCountElements = document.querySelectorAll('#cart-count');
-        const totalItems = this.getTotalItems();
-        
-        cartCountElements.forEach(element => {
-            element.textContent = totalItems;
-        });
-    }
-
-    async checkout(orderData) {
-        try {
-            const extraHeaders = orderData && orderData._headers ? orderData._headers : {};
-            const cleanedOrderData = Object.assign({}, orderData);
-            if (cleanedOrderData._headers) delete cleanedOrderData._headers;
-
-            const orderPayload = {
-                customer_name: String(cleanedOrderData.customer_name || ''),
-                customer_email: String(cleanedOrderData.customer_email || ''),
-                customer_phone: String(cleanedOrderData.customer_phone || ''),
-                customer_address: String(cleanedOrderData.customer_address || ''),
-                items: this.items,
-                total_amount: this.getTotalPrice()
-            };
-
-            const order = await Components.apiCall('/orders', {
-                method: 'POST',
-                headers: extraHeaders,
-                body: orderPayload
-            });
-
-            this.items = [];
-            this.saveCart();
-            this.updateCartCount();
-
-            return order;
-        } catch (error) {
-            throw error;
-        }
-    }
-
-    getProductData(productId) {
-        const productsData = {
-            1: { id: 1, name: 'Видеорегистратор 4K', price: 5990, image_url: 'https://images.unsplash.com/photo-1606144042614-b2417e99c4e3' },
-            2: { id: 2, name: 'Автомобильные коврики', price: 3490, image_url: 'https://images.unsplash.com/photo-1570733780745-d192c48b8ff3' },
-            3: { id: 3, name: 'Компрессор автомобильный', price: 2790, image_url: 'https://images.unsplash.com/photo-1583121274602-3e2820c69888' },
-            4: { id: 4, name: 'Навигатор с радар-детектором', price: 8990, image_url: 'https://images.unsplash.com/photo-1558637845-c8b7ead71a3e' },
-            5: { id: 5, name: 'Полироль для кузова', price: 890, image_url: 'https://images.unsplash.com/photo-1544829099-b9a0c07fad1a' },
-            6: { id: 6, name: 'Чехлы на сиденья', price: 2490, image_url: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70' },
-            7: { id: 7, name: 'Сигнализация с автозапуском', price: 12990, image_url: 'https://images.unsplash.com/photo-1580273916550-e323be2ae537' },
-            8: { id: 8, name: 'Щетки стеклоочистителя', price: 1290, image_url: 'https://images.unsplash.com/photo-1552519507-da3b142c6e3d' }
-        };
-        
-        return productsData[productId];
-    }
-}
-
 document.addEventListener('DOMContentLoaded', function() {
     window.shopApp = new ShopApp();
-    window.CartManager = CartManager;
 });

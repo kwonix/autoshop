@@ -30,12 +30,17 @@ app.get('/admin/*', (req, res) => {
 // Serve frontend static files
 app.use(express.static(path.join(__dirname, '..', 'frontend')));
 
-// Rate limiting
+// Rate limiting - configurable via environment variables
 const limiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100 // limit each IP to 100 requests per windowMs
+    windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000, // default: 15 minutes
+    max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100, // default: 100 requests per window
+    message: { error: 'Too many requests, please try again later.' },
+    standardHeaders: true, // Return rate limit info in `RateLimit-*` headers
+    legacyHeaders: false, // Disable `X-RateLimit-*` headers
 });
 app.use(limiter);
+
+console.log(`Rate limiting enabled: ${limiter.max || process.env.RATE_LIMIT_MAX_REQUESTS || 100} requests per ${(limiter.windowMs || process.env.RATE_LIMIT_WINDOW_MS || 900000) / 60000} minutes`);
 
 // Utility: normalize features field from various form representations
 function normalizeFeatures(input) {
@@ -253,10 +258,29 @@ app.get('/api/categories', async (req, res) => {
 // Создать заказ
 app.post('/api/orders', async (req, res) => {
     try {
-        const { customer_name, customer_email, customer_phone, customer_address, items, total_amount } = req.body;
+        const { customer_name, customer_email, customer_phone, customer_address, customer_comment, items, total_amount } = req.body;
         
         if (!customer_name || !customer_email || !customer_phone || !items || !total_amount) {
             return res.status(400).json({ error: 'Все обязательные поля должны быть заполнены' });
+        }
+
+        // Проверяем наличие товаров на складе
+        for (const item of items) {
+            const productCheck = await pool.query(
+                'SELECT stock, name FROM products WHERE id = $1',
+                [item.id]
+            );
+            
+            if (productCheck.rows.length === 0) {
+                return res.status(400).json({ error: `Товар с ID ${item.id} не найден` });
+            }
+            
+            const product = productCheck.rows[0];
+            if (product.stock < item.quantity) {
+                return res.status(400).json({ 
+                    error: `Недостаточно товара "${product.name}" на складе. Доступно: ${product.stock} шт.` 
+                });
+            }
         }
 
         // Попытка извлечь user_id из заголовка Authorization (если пользователь залогинен)
@@ -277,15 +301,23 @@ app.post('/api/orders', async (req, res) => {
         let result;
         if (userId) {
             result = await pool.query(
-                `INSERT INTO orders (user_id, customer_name, customer_email, customer_phone, customer_address, items, total_amount) 
-                 VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
-                [userId, customer_name, customer_email, customer_phone, customer_address, JSON.stringify(items), total_amount]
+                `INSERT INTO orders (user_id, customer_name, customer_email, customer_phone, customer_address, customer_comment, items, total_amount) 
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
+                [userId, customer_name, customer_email, customer_phone, customer_address, customer_comment, JSON.stringify(items), total_amount]
             );
         } else {
             result = await pool.query(
-                `INSERT INTO orders (customer_name, customer_email, customer_phone, customer_address, items, total_amount) 
-                 VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-                [customer_name, customer_email, customer_phone, customer_address, JSON.stringify(items), total_amount]
+                `INSERT INTO orders (customer_name, customer_email, customer_phone, customer_address, customer_comment, items, total_amount) 
+                 VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+                [customer_name, customer_email, customer_phone, customer_address, customer_comment, JSON.stringify(items), total_amount]
+            );
+        }
+
+        // Уменьшаем количество товаров на складе
+        for (const item of items) {
+            await pool.query(
+                'UPDATE products SET stock = stock - $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
+                [item.quantity, item.id]
             );
         }
 
@@ -605,19 +637,42 @@ app.put('/api/admin/orders/:id', authenticateAdmin, async (req, res) => {
         const { id } = req.params;
         const { status, manager_notes } = req.body;
 
+        // Получаем старый статус заказа
+        const oldOrderResult = await pool.query('SELECT status, items FROM orders WHERE id = $1', [id]);
+        
+        if (oldOrderResult.rows.length === 0) {
+            return res.status(404).json({ error: 'Заказ не найден' });
+        }
+
+        const oldOrder = oldOrderResult.rows[0];
+        const oldStatus = oldOrder.status;
+
+        // Если заказ отменяется, возвращаем товары на склад
+        if (status === 'cancelled' && oldStatus !== 'cancelled') {
+            const items = typeof oldOrder.items === 'string' ? JSON.parse(oldOrder.items) : oldOrder.items;
+            
+            for (const item of items) {
+                await pool.query(
+                    'UPDATE products SET stock = stock + $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
+                    [item.quantity, item.id]
+                );
+            }
+        }
+
+        // Обновляем заказ
         const result = await pool.query(
             'UPDATE orders SET status = $1, manager_notes = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3 RETURNING *',
             [status, manager_notes, id]
         );
 
-        if (result.rows.length === 0) {
-            return res.status(404).json({ error: 'Заказ не найден' });
-        }
-
         // Добавляем запись в историю статусов
+        const historyNote = status === 'cancelled' && oldStatus !== 'cancelled' 
+            ? 'Заказ отменен, товары возвращены на склад'
+            : manager_notes || 'Статус обновлен';
+            
         await pool.query(
             'INSERT INTO order_status_history (order_id, status, notes) VALUES ($1, $2, $3)',
-            [id, status, manager_notes || 'Статус обновлен']
+            [id, status, historyNote]
         );
 
         res.json(result.rows[0]);
@@ -632,13 +687,31 @@ app.delete('/api/admin/orders/:id', authenticateAdmin, async (req, res) => {
     try {
         const { id } = req.params;
         
-        const result = await pool.query('DELETE FROM orders WHERE id = $1 RETURNING *', [id]);
+        // Получаем информацию о заказе перед удалением
+        const orderResult = await pool.query('SELECT items, status FROM orders WHERE id = $1', [id]);
         
-        if (result.rows.length === 0) {
+        if (orderResult.rows.length === 0) {
             return res.status(404).json({ error: 'Заказ не найден' });
         }
 
-        res.json({ message: 'Заказ успешно удален' });
+        const order = orderResult.rows[0];
+        
+        // Если заказ не был отменен, возвращаем товары на склад
+        if (order.status !== 'cancelled') {
+            const items = typeof order.items === 'string' ? JSON.parse(order.items) : order.items;
+            
+            for (const item of items) {
+                await pool.query(
+                    'UPDATE products SET stock = stock + $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
+                    [item.quantity, item.id]
+                );
+            }
+        }
+        
+        // Удаляем заказ
+        await pool.query('DELETE FROM orders WHERE id = $1', [id]);
+
+        res.json({ message: 'Заказ успешно удален, товары возвращены на склад' });
     } catch (error) {
         console.error('Error deleting order:', error);
         res.status(500).json({ error: 'Ошибка удаления заказа' });
@@ -1029,7 +1102,6 @@ app.get('/api/orders', authenticateToken, async (req, res) => {
         if (email) {
             result = await pool.query('SELECT * FROM orders WHERE customer_email = $1 ORDER BY created_at DESC', [email]);
         } else {
-            // В случае, если в таблице orders будет поле user_id
             result = await pool.query('SELECT * FROM orders WHERE user_id = $1 ORDER BY created_at DESC', [userId]);
         }
 
@@ -1037,6 +1109,162 @@ app.get('/api/orders', authenticateToken, async (req, res) => {
     } catch (error) {
         console.error('Error fetching user orders:', error);
         res.status(500).json({ error: 'Ошибка загрузки заказов пользователя' });
+    }
+});
+
+// ==================== USER ADDRESSES ROUTES ====================
+
+// Получить все адреса текущего пользователя
+app.get('/api/auth/addresses', authenticateToken, async (req, res) => {
+    try {
+        const userId = req.user && req.user.userId;
+        if (!userId) {
+            return res.status(400).json({ error: 'Не удалось определить пользователя' });
+        }
+
+        const result = await pool.query(
+            'SELECT * FROM user_addresses WHERE user_id = $1 ORDER BY is_default DESC, created_at DESC',
+            [userId]
+        );
+
+        res.json(result.rows);
+    } catch (error) {
+        console.error('Error fetching addresses:', error);
+        res.status(500).json({ error: 'Ошибка загрузки адресов' });
+    }
+});
+
+// Добавить новый адрес
+app.post('/api/auth/addresses', authenticateToken, async (req, res) => {
+    try {
+        const userId = req.user && req.user.userId;
+        if (!userId) {
+            return res.status(400).json({ error: 'Не удалось определить пользователя' });
+        }
+
+        const { label, address, is_default } = req.body;
+
+        if (!label || !address) {
+            return res.status(400).json({ error: 'Название и адрес обязательны' });
+        }
+
+        // Если новый адрес основной, убираем флаг у остальных
+        if (is_default) {
+            await pool.query(
+                'UPDATE user_addresses SET is_default = false WHERE user_id = $1',
+                [userId]
+            );
+        }
+
+        const result = await pool.query(
+            'INSERT INTO user_addresses (user_id, label, address, is_default) VALUES ($1, $2, $3, $4) RETURNING *',
+            [userId, label, address, is_default || false]
+        );
+
+        res.status(201).json(result.rows[0]);
+    } catch (error) {
+        console.error('Error creating address:', error);
+        res.status(500).json({ error: 'Ошибка создания адреса' });
+    }
+});
+
+// Обновить адрес
+app.put('/api/auth/addresses/:id', authenticateToken, async (req, res) => {
+    try {
+        const userId = req.user && req.user.userId;
+        if (!userId) {
+            return res.status(400).json({ error: 'Не удалось определить пользователя' });
+        }
+
+        const { id } = req.params;
+        const { label, address, is_default } = req.body;
+
+        // Проверяем, что адрес принадлежит пользователю
+        const checkResult = await pool.query(
+            'SELECT * FROM user_addresses WHERE id = $1 AND user_id = $2',
+            [id, userId]
+        );
+
+        if (checkResult.rows.length === 0) {
+            return res.status(404).json({ error: 'Адрес не найден' });
+        }
+
+        // Если адрес становится основным, убираем флаг у остальных
+        if (is_default) {
+            await pool.query(
+                'UPDATE user_addresses SET is_default = false WHERE user_id = $1 AND id != $2',
+                [userId, id]
+            );
+        }
+
+        const result = await pool.query(
+            'UPDATE user_addresses SET label = $1, address = $2, is_default = $3, updated_at = CURRENT_TIMESTAMP WHERE id = $4 AND user_id = $5 RETURNING *',
+            [label, address, is_default || false, id, userId]
+        );
+
+        res.json(result.rows[0]);
+    } catch (error) {
+        console.error('Error updating address:', error);
+        res.status(500).json({ error: 'Ошибка обновления адреса' });
+    }
+});
+
+// Удалить адрес
+app.delete('/api/auth/addresses/:id', authenticateToken, async (req, res) => {
+    try {
+        const userId = req.user && req.user.userId;
+        if (!userId) {
+            return res.status(400).json({ error: 'Не удалось определить пользователя' });
+        }
+
+        const { id } = req.params;
+
+        const result = await pool.query(
+            'DELETE FROM user_addresses WHERE id = $1 AND user_id = $2 RETURNING *',
+            [id, userId]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Адрес не найден' });
+        }
+
+        res.json({ message: 'Адрес успешно удален' });
+    } catch (error) {
+        console.error('Error deleting address:', error);
+        res.status(500).json({ error: 'Ошибка удаления адреса' });
+    }
+});
+
+// Сделать адрес основным
+app.patch('/api/auth/addresses/:id/default', authenticateToken, async (req, res) => {
+    try {
+        const userId = req.user && req.user.userId;
+        if (!userId) {
+            return res.status(400).json({ error: 'Не удалось определить пользователя' });
+        }
+
+        const { id } = req.params;
+
+        // Убираем флаг у всех адресов
+        await pool.query(
+            'UPDATE user_addresses SET is_default = false WHERE user_id = $1',
+            [userId]
+        );
+
+        // Устанавливаем флаг для выбранного адреса
+        const result = await pool.query(
+            'UPDATE user_addresses SET is_default = true, updated_at = CURRENT_TIMESTAMP WHERE id = $1 AND user_id = $2 RETURNING *',
+            [id, userId]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Адрес не найден' });
+        }
+
+        res.json(result.rows[0]);
+    } catch (error) {
+        console.error('Error setting default address:', error);
+        res.status(500).json({ error: 'Ошибка установки основного адреса' });
     }
 });
 

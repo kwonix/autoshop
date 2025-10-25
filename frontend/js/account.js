@@ -1,130 +1,380 @@
-// account.js - Логика личного кабинета пользователя
-document.addEventListener('DOMContentLoaded', async () => {
-    const token = localStorage.getItem('user_token');
-    if (!token) {
-        // Перенаправляем на страницу входа
-        window.location.href = 'login.html';
-        return;
+// account.js - Логика личного кабинета
+class AccountApp {
+    constructor() {
+        this.addresses = [];
+        this.editingAddressId = null;
+        this.init();
     }
 
-    // Получаем профиль с сервера — профиль должен храниться на стороне сервера
-    let user = {};
-    try {
-        const profile = await Components.apiCall('/auth/profile', {
-            method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${token}`
+    init() {
+        const token = localStorage.getItem('user_token');
+        if (!token) {
+            window.location.href = 'login.html';
+            return;
+        }
+
+        this.loadProfile();
+        this.loadOrders();
+        this.loadAddresses();
+        this.setupEventListeners();
+    }
+
+    setupEventListeners() {
+        // Сохранение профиля
+        document.getElementById('save-profile').addEventListener('click', () => {
+            this.saveProfile();
+        });
+
+        // Выход
+        document.getElementById('logout').addEventListener('click', () => {
+            this.logout();
+        });
+
+        // Форма добавления адреса
+        document.getElementById('address-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            this.saveAddress();
+        });
+
+        // Закрытие модального окна по клику на overlay
+        document.getElementById('address-modal').addEventListener('click', (e) => {
+            if (e.target.id === 'address-modal') {
+                this.closeAddressModal();
             }
         });
-        user = profile || {};
-    } catch (e) {
-        console.warn('Profile fetch failed; profile data unavailable', e);
     }
 
-    // Заполняем форму профиля
-    document.getElementById('profile-email').value = user.email || '';
-    document.getElementById('profile-name').value = user.full_name || '';
-    document.getElementById('profile-phone').value = user.phone || '';
-
-    document.getElementById('logout').addEventListener('click', () => {
-        localStorage.removeItem('user_token');
-        localStorage.removeItem('user_data');
-        window.location.href = 'index.html';
-    });
-
-    document.getElementById('save-profile').addEventListener('click', async () => {
-        const name = document.getElementById('profile-name').value;
-        const phone = document.getElementById('profile-phone').value;
-
-        // Попытка отправить изменения на сервер
+    async loadProfile() {
         try {
-            const result = await Components.apiCall('/auth/profile', {
+            const token = localStorage.getItem('user_token');
+            const profile = await Components.apiCall('/auth/profile', {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            document.getElementById('profile-email').value = profile.email || '';
+            document.getElementById('profile-name').value = profile.full_name || '';
+            document.getElementById('profile-phone').value = profile.phone || '';
+        } catch (error) {
+            console.error('Error loading profile:', error);
+            Components.showNotification('Ошибка загрузки профиля', 'error');
+        }
+    }
+
+    async saveProfile() {
+        try {
+            const token = localStorage.getItem('user_token');
+            const profileData = {
+                full_name: document.getElementById('profile-name').value,
+                phone: document.getElementById('profile-phone').value
+            };
+
+            await Components.apiCall('/auth/profile', {
                 method: 'PATCH',
                 headers: {
                     'Authorization': `Bearer ${token}`
                 },
-                body: {
-                    full_name: name,
-                    phone: phone
+                body: profileData
+            });
+
+            Components.showNotification('Профиль успешно обновлен');
+        } catch (error) {
+            console.error('Error saving profile:', error);
+            Components.showNotification(error.message || 'Ошибка сохранения профиля', 'error');
+        }
+    }
+
+    async loadOrders() {
+        try {
+            const token = localStorage.getItem('user_token');
+            const orders = await Components.apiCall('/orders', {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`
                 }
             });
 
-                // Обновляем интерфейс (не сохраняем профиль в localStorage — он хранится на сервере)
-                const newUser = Object.assign({}, user, result.user);
-                document.getElementById('profile-email').value = newUser.email || '';
-                document.getElementById('profile-name').value = newUser.full_name || '';
-                document.getElementById('profile-phone').value = newUser.phone || '';
-                Components.showNotification('Профиль сохранён');
+            this.renderOrders(orders);
         } catch (error) {
-            console.error('Ошибка сохранения профиля на сервере:', error);
-                // Не сохраняем профиль локально — показываем ошибку и предлагаем повторить
-                Components.showNotification('Ошибка сохранения профиля на сервере. Попробуйте позже.', 'error');
+            console.error('Error loading orders:', error);
+            document.getElementById('orders-list').innerHTML = 
+                '<p style="text-align: center; color: #666;">Не удалось загрузить заказы</p>';
         }
-    });
-
-    // Попытка загрузить заказы пользователя с сервера
-    try {
-        const orders = await Components.apiCall('/orders', {
-            method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
-        });
-
-        renderOrders(orders);
-        document.getElementById('orders-note').textContent = '';
-    } catch (error) {
-        console.error('Ошибка загрузки заказов:', error);
-        document.getElementById('orders-list').innerHTML = '<p>Не удалось загрузить историю заказов.</p>';
-        document.getElementById('orders-note').textContent = 'Если сервер возвращает ошибку, возможно, отсутствует соответствующий бэкенд-эндпоинт. Мы добавили GET /api/orders в backend для возврата заказов по email из токена.';
-    }
-});
-
-function renderOrders(orders) {
-    const container = document.getElementById('orders-list');
-    if (!container) return;
-
-    if (!orders || orders.length === 0) {
-        container.innerHTML = '<p>История заказов пуста.</p>';
-        return;
     }
 
-    container.innerHTML = orders.map(order => `
-        <div class="card" style="padding:12px; margin-bottom:10px;">
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-                <div>
-                    <strong>Заказ #${order.id}</strong>
-                    <div style="font-size:0.9em; color:#666">${new Date(order.created_at).toLocaleString()}</div>
-                </div>
-                <div style="text-align:right">
-                    <div style="font-weight:600">${Components.formatPrice(order.total_amount || 0)}</div>
-                    <div class="status-badge status-${order.status}" style="margin-top:6px">${order.status}</div>
-                </div>
-            </div>
-            <div style="margin-top:10px; font-size:0.95em; color:#333">
-                ${renderOrderItems(order.items)}
-            </div>
-        </div>
-    `).join('');
-}
+    renderOrders(orders) {
+        const container = document.getElementById('orders-list');
+        
+        if (orders.length === 0) {
+            container.innerHTML = '<p style="text-align: center; color: #666;">У вас пока нет заказов</p>';
+            return;
+        }
 
-function renderOrderItems(itemsJson) {
-    try {
-        const items = typeof itemsJson === 'string' ? JSON.parse(itemsJson) : itemsJson;
-        if (!items || items.length === 0) return '<div style="color:#666">Нет товаров в заказе</div>';
+        container.innerHTML = orders.map(order => `
+            <div class="order-item">
+                <div class="order-header">
+                    <div class="order-id">Заказ #${order.id}</div>
+                    <div class="order-status ${order.status}">${this.getStatusText(order.status)}</div>
+                </div>
+                <div class="order-info">
+                    <div class="order-info-item">
+                        <span class="order-info-label">Дата:</span>
+                        ${new Date(order.created_at).toLocaleDateString('ru-RU')}
+                    </div>
+                    <div class="order-info-item">
+                        <span class="order-info-label">Сумма:</span>
+                        ${Components.formatPrice(order.total_amount)}
+                    </div>
+                    <div class="order-info-item" style="grid-column: 1 / -1;">
+                    <span class="order-info-label">Адрес доставки:</span>
+                    ${order.customer_address || 'Не указан'}
+                    </div>
+                        ${order.customer_comment ? `
+                    <div class="order-info-item" style="grid-column: 1 / -1;">
+                        <span class="order-info-label">Комментарий:</span>
+                        <span style="font-style: italic; color: #666;">${order.customer_comment}</span>
+                    </div>
+                ` : ''}
+            </div>
+                ${this.renderOrderItems(order.items)}
+            </div>
+        `).join('');
+    }
+
+    renderOrderItems(items) {
+        let parsedItems = [];
+        try {
+            parsedItems = typeof items === 'string' ? JSON.parse(items) : items;
+        } catch (e) {
+            return '<p>Не удалось загрузить товары</p>';
+        }
 
         return `
-            <div style="border-top:1px solid #eee; margin-top:10px; padding-top:10px;">
-                ${items.map(it => `
-                    <div style="display:flex; justify-content:space-between; padding:4px 0;">
-                        <div>${it.name}</div>
-                        <div>${it.quantity} × ${Components.formatPrice(it.price)}</div>
+            <div class="order-items">
+                <strong style="display: block; margin-bottom: 10px;">Товары в заказе:</strong>
+                ${parsedItems.map(item => `
+                    <div class="order-item-row">
+                        <span>${item.name} × ${item.quantity}</span>
+                        <span>${Components.formatPrice(item.price * item.quantity)}</span>
                     </div>
                 `).join('')}
             </div>
         `;
-    } catch (e) {
-        console.error('Ошибка рендера items', e);
-        return '<div style="color:#666">Невозможно прочитать товары заказа</div>';
+    }
+
+    getStatusText(status) {
+        const statuses = {
+            new: 'Новый',
+            processing: 'В обработке',
+            shipped: 'Отправлен',
+            delivered: 'Доставлен',
+            cancelled: 'Отменен'
+        };
+        return statuses[status] || status;
+    }
+
+    // Управление адресами
+    async loadAddresses() {
+        try {
+            const token = localStorage.getItem('user_token');
+            const addresses = await Components.apiCall('/auth/addresses', {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            this.addresses = addresses;
+            this.renderAddresses();
+        } catch (error) {
+            console.error('Error loading addresses:', error);
+            this.addresses = [];
+            this.renderAddresses();
+        }
+    }
+
+    renderAddresses() {
+        const container = document.getElementById('addresses-list');
+        
+        if (this.addresses.length === 0) {
+            container.innerHTML = '<p style="color: #666; text-align: center;">Нет сохраненных адресов</p>';
+            return;
+        }
+
+        container.innerHTML = this.addresses.map((address) => `
+            <div class="address-item ${address.is_default ? 'default' : ''}">
+                <div class="address-label">
+                    ${address.label}
+                    ${address.is_default ? '<span style="color: #4caf50; font-size: 0.85rem;"> (Основной)</span>' : ''}
+                </div>
+                <div class="address-text">${address.address}</div>
+                <div class="address-actions">
+                    <button class="btn btn-outline btn-small" onclick="accountApp.editAddress(${address.id})">
+                        Изменить
+                    </button>
+                    ${!address.is_default ? `
+                        <button class="btn btn-outline btn-small" onclick="accountApp.setDefaultAddress(${address.id})">
+                            Сделать основным
+                        </button>
+                    ` : ''}
+                    <button class="btn btn-secondary btn-small" onclick="accountApp.deleteAddress(${address.id})">
+                        Удалить
+                    </button>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    showAddAddressModal() {
+        this.editingAddressId = null;
+        document.getElementById('address-modal-title').textContent = 'Добавить адрес доставки';
+        document.getElementById('address-label').value = '';
+        document.getElementById('address-text').value = '';
+        document.getElementById('address-default').checked = false;
+        document.getElementById('address-modal').style.display = 'block';
+        document.body.style.overflow = 'hidden';
+    }
+
+    editAddress(addressId) {
+        // Валидация ID адреса
+        if (!addressId || addressId === 0) {
+            console.error('Invalid address ID:', addressId);
+            Components.showNotification('Ошибка: некорректный идентификатор адреса', 'error');
+            return;
+        }
+
+        this.editingAddressId = addressId;
+        const address = this.addresses.find(a => a.id === addressId);
+        
+        if (!address) {
+            console.error('Address not found:', addressId, this.addresses);
+            Components.showNotification('Адрес не найден', 'error');
+            return;
+        }
+        
+        document.getElementById('address-modal-title').textContent = 'Редактировать адрес';
+        document.getElementById('address-label').value = address.label || '';
+        document.getElementById('address-text').value = address.address || '';
+        document.getElementById('address-default').checked = address.is_default || false;
+        document.getElementById('address-modal').style.display = 'block';
+        document.body.style.overflow = 'hidden';
+    }
+
+    closeAddressModal() {
+        document.getElementById('address-modal').style.display = 'none';
+        document.body.style.overflow = '';
+        this.editingAddressId = null;
+    }
+
+    async saveAddress() {
+        const label = document.getElementById('address-label').value.trim();
+        const address = document.getElementById('address-text').value.trim();
+        const is_default = document.getElementById('address-default').checked;
+
+        if (!label || !address) {
+            Components.showNotification('Заполните все поля', 'error');
+            return;
+        }
+
+        try {
+            const token = localStorage.getItem('user_token');
+            const addressData = { label, address, is_default };
+
+            if (this.editingAddressId) {
+                // Редактирование
+                await Components.apiCall(`/auth/addresses/${this.editingAddressId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: addressData
+                });
+                Components.showNotification('Адрес обновлен');
+            } else {
+                // Добавление
+                await Components.apiCall('/auth/addresses', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: addressData
+                });
+                Components.showNotification('Адрес добавлен');
+            }
+
+            this.closeAddressModal();
+            await this.loadAddresses();
+        } catch (error) {
+            Components.showNotification(error.message || 'Ошибка сохранения адреса', 'error');
+        }
+    }
+
+    async setDefaultAddress(addressId) {
+        // Валидация ID адреса
+        if (!addressId || addressId === 0) {
+            console.error('Invalid address ID for setDefault:', addressId);
+            Components.showNotification('Ошибка: некорректный идентификатор адреса', 'error');
+            return;
+        }
+
+        // Проверяем, что адрес существует
+        const address = this.addresses.find(a => a.id === addressId);
+        if (!address) {
+            console.error('Address not found for setDefault:', addressId, this.addresses);
+            Components.showNotification('Адрес не найден', 'error');
+            return;
+        }
+
+        try {
+            const token = localStorage.getItem('user_token');
+            await Components.apiCall(`/auth/addresses/${addressId}/default`, {
+                method: 'PATCH',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            Components.showNotification('Основной адрес обновлен');
+            await this.loadAddresses();
+        } catch (error) {
+            console.error('Error setting default address:', error);
+            Components.showNotification(error.message || 'Ошибка установки основного адреса', 'error');
+        }
+    }
+
+    async deleteAddress(addressId) {
+        // Валидация ID адреса
+        if (!addressId || addressId === 0) {
+            console.error('Invalid address ID for delete:', addressId);
+            Components.showNotification('Ошибка: некорректный идентификатор адреса', 'error');
+            return;
+        }
+
+        if (!confirm('Удалить этот адрес?')) return;
+        
+        try {
+            const token = localStorage.getItem('user_token');
+            await Components.apiCall(`/auth/addresses/${addressId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            Components.showNotification('Адрес удален');
+            await this.loadAddresses();
+        } catch (error) {
+            console.error('Error deleting address:', error);
+            Components.showNotification(error.message || 'Ошибка удаления адреса', 'error');
+        }
+    }
+
+    logout() {
+        localStorage.removeItem('user_token');
+        window.location.href = 'login.html';
     }
 }
+
+// Инициализация
+document.addEventListener('DOMContentLoaded', function() {
+    window.accountApp = new AccountApp();
+});

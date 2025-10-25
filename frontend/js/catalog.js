@@ -78,6 +78,9 @@ class CatalogApp {
                     <h3>${product.name}</h3>
                     <p>${product.description}</p>
                     <div class="price">${Components.formatPrice(product.price)}</div>
+                    <button class="btn btn-outline" onclick="catalogApp.viewProduct(${product.id})">
+                        Подробнее
+                    </button>
                     <button class="btn btn-primary" onclick="shopApp.cart.addToCart(${product.id})">
                         В корзину
                     </button>
@@ -149,6 +152,92 @@ class CatalogApp {
                 this.searchProducts();
             }
         });
+    }
+
+    async viewProduct(productId) {
+        try {
+            const product = await Components.apiCall(`/products/${productId}`);
+            this.showProductModal(product);
+        } catch (error) {
+            console.error('Error loading product:', error);
+            Components.showNotification('Ошибка загрузки товара', 'error');
+        }
+    }
+
+    showProductModal(product) {
+        const modal = document.getElementById('product-modal');
+        const content = document.getElementById('product-modal-content');
+        
+        // Parse features
+        let features = [];
+        try {
+            if (product.features) {
+                features = typeof product.features === 'string' ? JSON.parse(product.features) : product.features;
+            }
+        } catch (e) {
+            console.error('Error parsing features:', e);
+        }
+        
+        content.innerHTML = `
+            <div class="product-modal-image">
+                <img src="${product.image_url}" alt="${product.name}">
+                <div class="product-badges">
+                    <span class="badge ${product.status === 'active' ? 'badge-active' : 'badge-inactive'}">
+                        ${product.status === 'active' ? 'В наличии' : 'Нет в наличии'}
+                    </span>
+                    ${product.popular ? '<span class="badge badge-popular">Популярное</span>' : ''}
+                </div>
+            </div>
+            <div class="product-modal-details">
+                <h2>${product.name}</h2>
+                <p class="product-modal-description">${product.description}</p>
+                
+                <div class="product-modal-price">
+                    <div class="price-label">Цена</div>
+                    <div class="price-value">${Components.formatPrice(product.price)}</div>
+                </div>
+                
+                <div class="product-modal-info">
+                    <div class="info-row">
+                        <span class="info-label">Категория</span>
+                        <span class="info-value">${product.category_name || 'Не указана'}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Наличие на складе</span>
+                        <span class="info-value ${product.stock > 10 ? 'stock-high' : 'stock-low'}">
+                            ${product.stock} шт.
+                        </span>
+                    </div>
+                </div>
+                
+                ${features && features.length > 0 ? `
+                    <div class="product-modal-features">
+                        <h3>Характеристики</h3>
+                        <ul class="features-list">
+                            ${features.map(f => `<li>${f}</li>`).join('')}
+                        </ul>
+                    </div>
+                ` : ''}
+                
+                <div class="product-modal-actions">
+                    <button class="btn btn-primary" onclick="shopApp.cart.addToCart(${product.id}); catalogApp.closeProductModal();">
+                        Добавить в корзину
+                    </button>
+                    <button class="btn btn-outline" onclick="catalogApp.closeProductModal()">
+                        Закрыть
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        modal.classList.add('active');
+        document.body.style.overflow = 'hidden';
+    }
+
+    closeProductModal() {
+        const modal = document.getElementById('product-modal');
+        modal.classList.remove('active');
+        document.body.style.overflow = '';
     }
 }
 

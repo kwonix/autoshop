@@ -520,8 +520,8 @@
     border-radius: 12px;
     box-shadow: 0 20px 40px rgba(0,0,0,0.3);
     z-index: 2001;
-    min-width: 500px;
-    max-width: 90vw;
+    min-width: 600px;
+    max-width: 95vw;
     max-height: 90vh;
     overflow-y: auto;
 }

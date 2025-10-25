@@ -5,6 +5,149 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Личный кабинет — AutoGadget</title>
     <link rel="stylesheet" href="style.css">
+    <style>
+        .account-container {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 30px;
+            margin-top: 30px;
+        }
+
+        .account-sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .account-card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .account-card h2 {
+            margin: 0 0 20px 0;
+            color: var(--primary-color);
+            font-size: 1.3rem;
+            border-bottom: 2px solid var(--light-color);
+            padding-bottom: 10px;
+        }
+
+        .address-item {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            position: relative;
+            border-left: 4px solid var(--primary-color);
+        }
+
+        .address-item.default {
+            border-left-color: #4caf50;
+        }
+
+        .address-label {
+            font-weight: 600;
+            color: var(--primary-color);
+            margin-bottom: 5px;
+        }
+
+        .address-text {
+            color: #666;
+            font-size: 0.95rem;
+        }
+
+        .address-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .order-item {
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 15px;
+            transition: all 0.3s;
+        }
+
+        .order-item:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .order-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .order-id {
+            font-weight: 600;
+            font-size: 1.1rem;
+            color: var(--primary-color);
+        }
+
+        .order-status {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .order-status.new { background: #ffeb3b; color: #333; }
+        .order-status.processing { background: #2196f3; color: white; }
+        .order-status.shipped { background: #4caf50; color: white; }
+        .order-status.delivered { background: #8bc34a; color: white; }
+        .order-status.cancelled { background: #f44336; color: white; }
+
+        .order-info {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .order-info-item {
+            font-size: 0.9rem;
+        }
+
+        .order-info-label {
+            color: #666;
+            font-weight: 600;
+        }
+
+        .order-items {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+        }
+
+        .order-item-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px 0;
+        }
+
+        .btn-small {
+            padding: 6px 12px;
+            font-size: 0.85rem;
+        }
+
+        @media (max-width: 768px) {
+            .account-container {
+                grid-template-columns: 1fr;
+            }
+
+            .order-info {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
 </head>
 <body>
     <div id="header-container"></div>
@@ -12,39 +155,84 @@
     <main class="container" style="padding: 40px 0;">
         <h1>Личный кабинет</h1>
 
-        <section id="profile-section" style="margin-top: 20px;">
-            <h2>Профиль</h2>
-            <form id="profile-form" class="card" style="padding: 20px; max-width: 600px;">
-                <div class="form-group">
-                    <label for="profile-email">Email</label>
-                    <input id="profile-email" type="email" disabled />
+        <div class="account-container">
+            <!-- Левая колонка: Личная информация и адреса -->
+            <div class="account-sidebar">
+                <!-- Личная информация -->
+                <div class="account-card">
+                    <h2>Личная информация</h2>
+                    <form id="profile-form">
+                        <div class="form-group">
+                            <label for="profile-email">Email</label>
+                            <input id="profile-email" type="email" disabled style="background: #f0f0f0;" />
+                        </div>
+                        <div class="form-group">
+                            <label for="profile-name">ФИО</label>
+                            <input id="profile-name" type="text" placeholder="Введите ваше имя" />
+                        </div>
+                        <div class="form-group">
+                            <label for="profile-phone">Телефон</label>
+                            <input id="profile-phone" type="tel" placeholder="+7 (___) ___-__-__" />
+                        </div>
+                        <button id="save-profile" class="btn btn-primary" type="button" style="width: 100%;">
+                            Сохранить изменения
+                        </button>
+                    </form>
+                    <button id="logout" class="btn btn-secondary" type="button" style="width: 100%; margin-top: 10px;">
+                        Выйти из аккаунта
+                    </button>
                 </div>
-                <div class="form-group">
-                    <label for="profile-name">ФИО</label>
-                    <input id="profile-name" type="text" />
-                </div>
-                <div class="form-group">
-                    <label for="profile-phone">Телефон</label>
-                    <input id="profile-phone" type="tel" />
-                </div>
-                <div style="display:flex; gap:10px; margin-top:10px;">
-                    <button id="save-profile" class="btn btn-primary" type="button">Сохранить (локально)</button>
-                    <button id="logout" class="btn btn-secondary" type="button">Выйти</button>
-                </div>
-                <p style="margin-top:10px; color:#666">Изменение профиля на сервере требует соответствующего backend-эндпоинта. Сейчас изменения сохраняются в localStorage.</p>
-            </form>
-        </section>
 
-        <section id="orders-section" style="margin-top: 40px;">
-            <h2>История заказов</h2>
-            <div id="orders-list">
-                <p>Загрузка...</p>
+                <!-- Адреса доставки -->
+                <div class="account-card">
+                    <h2>Адреса доставки</h2>
+                    <div id="addresses-list">
+                        <!-- Адреса будут загружены здесь -->
+                    </div>
+                    <button class="btn btn-outline" onclick="accountApp.showAddAddressModal()" style="width: 100%; margin-top: 10px;">
+                        + Добавить новый адрес
+                    </button>
+                </div>
             </div>
-            <p id="orders-note" style="color:#666; margin-top:10px;"></p>
-        </section>
+
+            <!-- Правая колонка: История заказов -->
+            <div class="account-card">
+                <h2>История заказов</h2>
+                <div id="orders-list">
+                    <p style="text-align: center; color: #666;">Загрузка заказов...</p>
+                </div>
+            </div>
+        </div>
     </main>
 
     <div id="footer-container"></div>
+
+    <!-- Модальное окно для добавления адреса -->
+    <div id="address-modal" class="modal-overlay" style="display: none;" onclick="if(event.target === this) accountApp.closeAddressModal()">
+        <div class="modal" style="min-width: 500px; max-width: 600px;">
+            <h2 id="address-modal-title">Добавить адрес доставки</h2>
+            <form id="address-form">
+                <div class="form-group">
+                    <label for="address-label">Название адреса *</label>
+                    <input id="address-label" type="text" placeholder="Дом, Работа, и т.д." required />
+                </div>
+                <div class="form-group">
+                    <label for="address-text">Полный адрес *</label>
+                    <textarea id="address-text" rows="3" placeholder="Город, улица, дом, квартира" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                        <input id="address-default" type="checkbox" />
+                        Сделать основным адресом
+                    </label>
+                </div>
+                <div class="modal-actions" style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 25px; padding-top: 20px; border-top: 1px solid #e0e0e0;">
+                    <button type="submit" class="btn btn-primary">Сохранить</button>
+                    <button type="button" class="btn btn-secondary" onclick="accountApp.closeAddressModal()">Отмена</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
     <script src="./js/components.js"></script>
     <script src="./js/account.js"></script>

@@ -131,20 +131,139 @@ class Components {
         try {
             const response = await fetch(url, config);
             
-            let data;
-            try {
-                data = await response.json();
-            } catch (e) {
-                data = await response.text();
-            }
-
+            // Сначала проверяем статус, потом читаем body
             if (!response.ok) {
-                throw new Error(data.error || data || 'Ошибка сервера');
+                let errorData;
+                const contentType = response.headers.get('content-type');
+                
+                try {
+                    if (contentType && contentType.includes('application/json')) {
+                        errorData = await response.json();
+                    } else {
+                        errorData = await response.text();
+                    }
+                } catch (e) {
+                    errorData = { error: `HTTP ${response.status}: ${response.statusText}` };
+                }
+
+                const errorMessage = typeof errorData === 'object' && errorData.error 
+                    ? errorData.error 
+                    : (typeof errorData === 'string' ? errorData : `HTTP ${response.status}`);
+                
+                throw new Error(errorMessage);
             }
 
-            return data;
+            // Успешный ответ
+            const contentType = response.headers.get('content-type');
+            if (contentType && contentType.includes('application/json')) {
+                return await response.json();
+            } else {
+                return await response.text();
+            }
         } catch (error) {
             console.error('API Error:', error);
+            throw error;
+        }
+    }
+}
+
+// Менеджер корзины
+class CartManager {
+    constructor() {
+        this.items = this.loadCart();
+        this.updateCartCount();
+    }
+
+    loadCart() {
+        try {
+            return JSON.parse(localStorage.getItem('cart')) || [];
+        } catch (e) {
+            return [];
+        }
+    }
+
+    saveCart() {
+        localStorage.setItem('cart', JSON.stringify(this.items));
+        this.updateCartCount();
+    }
+
+    updateCartCount() {
+        Components.updateCartCount();
+    }
+
+    async addToCart(productId) {
+        try {
+            // Загружаем информацию о товаре
+            const product = await Components.apiCall(`/products/${productId}`);
+            
+            // Проверяем, есть ли уже товар в корзине
+            const existingItem = this.items.find(item => item.id === productId);
+            
+            if (existingItem) {
+                existingItem.quantity++;
+            } else {
+                this.items.push({
+                    id: product.id,
+                    name: product.name,
+                    price: product.price,
+                    image: product.image_url,
+                    quantity: 1
+                });
+            }
+            
+            this.saveCart();
+            Components.showNotification(`${product.name} добавлен в корзину`);
+        } catch (error) {
+            console.error('Error adding to cart:', error);
+            Components.showNotification('Ошибка добавления товара в корзину', 'error');
+        }
+    }
+
+    removeFromCart(productId) {
+        this.items = this.items.filter(item => item.id !== productId);
+        this.saveCart();
+    }
+
+    updateQuantity(productId, quantity) {
+        if (quantity <= 0) {
+            this.removeFromCart(productId);
+            return;
+        }
+        
+        const item = this.items.find(item => item.id === productId);
+        if (item) {
+            item.quantity = quantity;
+            this.saveCart();
+        }
+    }
+
+    getTotalPrice() {
+        return this.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    }
+
+    async checkout(customerData) {
+        const headers = customerData._headers || {};
+        delete customerData._headers;
+
+        const orderData = {
+            ...customerData,
+            items: this.items,
+            total_amount: this.getTotalPrice() + (this.getTotalPrice() > 5000 ? 0 : 500)
+        };
+
+        try {
+            const order = await Components.apiCall('/orders', {
+                method: 'POST',
+                headers,
+                body: orderData
+            });
+
+            // Очищаем корзину
+            this.items = [];
+            this.saveCart();
+
+            return order;
+        } catch (error) {
             throw error;
         }
     }
@@ -163,4 +282,11 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     Components.updateCartCount();
+    
+    // Инициализируем глобальный объект shopApp с корзиной для главной страницы
+    if (!window.shopApp) {
+        window.shopApp = {
+            cart: new CartManager()
+        };
+    }
 });

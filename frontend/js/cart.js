@@ -2,6 +2,7 @@
 class CartApp {
     constructor() {
         this.cart = new CartManager();
+        this.userAddresses = [];
         this.init();
     }
 
@@ -79,29 +80,136 @@ class CartApp {
             e.preventDefault();
             await this.processCheckout();
         });
+
+        // НЕ добавляем обработчик для address-select здесь, 
+        // так как элемент создается динамически в renderAddressSelect()
     }
 
-    showCheckoutModal() {
+    async showCheckoutModal() {
         if (this.cart.items.length === 0) {
             Components.showNotification('Корзина пуста', 'error');
             return;
         }
 
-        (async () => {
+        const token = localStorage.getItem('user_token');
+        
+        if (token) {
+            // Пользователь авторизован - загружаем его данные и адреса
             try {
-                const userData = await this.getUserData();
+                const [userData, addresses] = await Promise.all([
+                    this.getUserData(),
+                    this.loadUserAddresses()
+                ]);
+
                 if (userData) {
                     document.getElementById('customer-name').value = userData.full_name || '';
                     document.getElementById('customer-email').value = userData.email || '';
                     document.getElementById('customer-phone').value = userData.phone || '';
-                    document.getElementById('customer-address').value = userData.address || '';
+                }
+
+                this.userAddresses = addresses || [];
+                this.renderAddressSelect();
+
+                // Автоматически заполняем основной адрес если есть
+                const defaultAddress = this.userAddresses.find(addr => addr.is_default);
+                if (defaultAddress) {
+                    const selectElement = document.getElementById('address-select');
+                    if (selectElement) {
+                        selectElement.value = defaultAddress.id;
+                        document.getElementById('customer-address').value = defaultAddress.address;
+                    }
                 }
             } catch (e) {
-                console.warn('Не удалось получить профиль для автозаполнения оформления заказа', e);
+                console.warn('Не удалось загрузить данные пользователя', e);
             }
-        })();
+        } else {
+            // Пользователь не авторизован - скрываем выбор адресов
+            this.renderAddressSelect();
+        }
 
         document.getElementById('checkout-modal').style.display = 'block';
+    }
+
+    renderAddressSelect() {
+        const selectContainer = document.getElementById('address-select-container');
+        const addressTextarea = document.getElementById('customer-address');
+        
+        if (this.userAddresses.length > 0) {
+            // Показываем выпадающий список с адресами
+            selectContainer.style.display = 'block';
+            
+            const selectHtml = `
+                <select id="address-select" class="form-control">
+                    <option value="">-- Выберите адрес --</option>
+                    ${this.userAddresses.map(addr => `
+                        <option value="${addr.id}" ${addr.is_default ? 'selected' : ''}>
+                            ${addr.label} ${addr.is_default ? '(Основной)' : ''}
+                        </option>
+                    `).join('')}
+                    <option value="custom">Ввести другой адрес</option>
+                </select>
+            `;
+            
+            selectContainer.innerHTML = selectHtml;
+            
+            // Если выбран адрес - делаем textarea readonly
+            if (this.userAddresses.find(addr => addr.is_default)) {
+                addressTextarea.readOnly = true;
+                addressTextarea.style.backgroundColor = '#f5f5f5';
+            }
+
+            // Добавляем обработчик события после рендеринга
+            const selectElement = document.getElementById('address-select');
+            if (selectElement) {
+                selectElement.addEventListener('change', (e) => {
+                    this.handleAddressSelect(e.target.value);
+                });
+            }
+        } else {
+            // Скрываем выпадающий список
+            selectContainer.style.display = 'none';
+            selectContainer.innerHTML = '';
+            addressTextarea.readOnly = false;
+            addressTextarea.style.backgroundColor = '';
+        }
+    }
+
+    handleAddressSelect(addressId) {
+        const addressTextarea = document.getElementById('customer-address');
+        
+        if (addressId === 'custom' || addressId === '') {
+            // Разрешаем ввод произвольного адреса
+            addressTextarea.value = '';
+            addressTextarea.readOnly = false;
+            addressTextarea.style.backgroundColor = '';
+            addressTextarea.placeholder = 'Введите адрес доставки';
+        } else {
+            // Заполняем выбранный адрес
+            const selectedAddress = this.userAddresses.find(addr => addr.id === parseInt(addressId));
+            if (selectedAddress) {
+                addressTextarea.value = selectedAddress.address;
+                addressTextarea.readOnly = true;
+                addressTextarea.style.backgroundColor = '#f5f5f5';
+            }
+        }
+    }
+
+    async loadUserAddresses() {
+        const token = localStorage.getItem('user_token');
+        if (!token) return [];
+
+        try {
+            const addresses = await Components.apiCall('/auth/addresses', {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            return addresses;
+        } catch (error) {
+            console.error('Error loading addresses:', error);
+            return [];
+        }
     }
 
     closeCheckoutModal() {
@@ -130,12 +238,14 @@ class CartApp {
         const emailEl = document.getElementById('customer-email');
         const phoneEl = document.getElementById('customer-phone');
         const addressEl = document.getElementById('customer-address');
+        const commentEl = document.getElementById('order-comment');
 
         const formData = {
             customer_name: nameEl ? nameEl.value.trim() : '',
             customer_email: emailEl ? emailEl.value.trim() : '',
             customer_phone: phoneEl ? phoneEl.value.trim() : '',
-            customer_address: addressEl ? addressEl.value.trim() : ''
+            customer_address: addressEl ? addressEl.value.trim() : '',
+            customer_comment: commentEl ? commentEl.value.trim() : ''
         };
 
         if (!formData.customer_name || !formData.customer_email || !formData.customer_phone) {
