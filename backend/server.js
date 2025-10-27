@@ -33,8 +33,8 @@ app.use(express.static(path.join(__dirname, '..', 'frontend')));
 // Rate limiting - configurable via environment variables
 const limiter = rateLimit({
     windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000, // default: 15 minutes
-    max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100, // default: 100 requests per window
-    message: { error: 'Too many requests, please try again later.' },
+    max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 1000, // default: 100 requests per window
+    message: { error: 'Слишком много запросов, попробуйте позже' },
     standardHeaders: true, // Return rate limit info in `RateLimit-*` headers
     legacyHeaders: false, // Disable `X-RateLimit-*` headers
 });
