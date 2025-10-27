@@ -404,6 +404,22 @@ class AdminApp {
             </div>
             
             <div class="form-group">
+                <label>Адрес доставки</label>
+                <div style="background: #f8f9fa; padding: 15px; border-radius: 5px;">
+                    <p>${order.customer_address || '<em style="color: #999;">Не указан</em>'}</p>
+                </div>
+            </div>
+            
+            ${order.customer_comment ? `
+            <div class="form-group">
+                <label>Комментарий клиента</label>
+                <div style="background: #fff3cd; padding: 15px; border-radius: 5px; border-left: 4px solid #ffc107;">
+                    <p style="margin: 0; font-style: italic;">${order.customer_comment}</p>
+                </div>
+            </div>
+            ` : ''}
+            
+            <div class="form-group">
                 <label>Товары в заказе</label>
                 <div style="background: #f8f9fa; padding: 15px; border-radius: 5px;">
                     ${this.renderOrderItems(order.items)}

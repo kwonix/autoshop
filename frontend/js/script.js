@@ -10,6 +10,7 @@ class ShopApp {
         this.loadPopularProducts();
         this.setupContactForm();
         this.setupAuthCheck();
+        this.setupScrollListeners();
     }
 
     async loadCategories() {
@@ -35,6 +36,9 @@ class ShopApp {
                 </div>
             </div>
         `).join('');
+        
+        // Update scroll buttons visibility
+        setTimeout(() => this.updateScrollButtons(), 100);
     }
 
     async loadPopularProducts() {
@@ -68,6 +72,9 @@ class ShopApp {
                 </div>
             </div>
         `).join('');
+        
+        // Update scroll buttons visibility
+        setTimeout(() => this.updateScrollButtons(), 100);
     }
 
     setupContactForm() {
@@ -116,6 +123,94 @@ class ShopApp {
                 loginBtn.href = 'account.html';
             }
         }
+    }
+
+    scrollCategories(direction) {
+        const container = document.getElementById('categories-grid');
+        if (!container) return;
+        
+        const scrollAmount = 300;
+        if (direction === 'left') {
+            container.scrollLeft -= scrollAmount;
+        } else {
+            container.scrollLeft += scrollAmount;
+        }
+        
+        this.updateScrollButtons();
+    }
+
+    scrollProducts(direction) {
+        const container = document.getElementById('popular-products');
+        if (!container) return;
+        
+        const scrollAmount = 300;
+        if (direction === 'left') {
+            container.scrollLeft -= scrollAmount;
+        } else {
+            container.scrollLeft += scrollAmount;
+        }
+        
+        this.updateScrollButtons();
+    }
+
+    updateScrollButtons() {
+        // Update categories scroll buttons
+        const categoriesGrid = document.getElementById('categories-grid');
+        if (categoriesGrid) {
+            const scrollContainer = categoriesGrid.parentElement;
+            const categoriesLeftBtn = scrollContainer.querySelector('.scroll-left');
+            const categoriesRightBtn = scrollContainer.querySelector('.scroll-right');
+            
+            const isAtStart = categoriesGrid.scrollLeft <= 0;
+            const isAtEnd = categoriesGrid.scrollLeft >= categoriesGrid.scrollWidth - categoriesGrid.clientWidth - 10;
+            const canScroll = categoriesGrid.scrollWidth > categoriesGrid.clientWidth;
+            
+            if (categoriesLeftBtn && categoriesRightBtn) {
+                categoriesLeftBtn.style.display = isAtStart || !canScroll ? 'none' : 'flex';
+                categoriesRightBtn.style.display = isAtEnd || !canScroll ? 'none' : 'flex';
+            }
+            
+            // Update gradient indicators
+            scrollContainer.classList.toggle('can-scroll-left', !isAtStart && canScroll);
+            scrollContainer.classList.toggle('can-scroll-right', !isAtEnd && canScroll);
+        }
+        
+        // Update products scroll buttons
+        const productsGrid = document.getElementById('popular-products');
+        if (productsGrid) {
+            const scrollContainer = productsGrid.parentElement;
+            const productsLeftBtn = scrollContainer.querySelector('.scroll-left');
+            const productsRightBtn = scrollContainer.querySelector('.scroll-right');
+            
+            const isAtStart = productsGrid.scrollLeft <= 0;
+            const isAtEnd = productsGrid.scrollLeft >= productsGrid.scrollWidth - productsGrid.clientWidth - 10;
+            const canScroll = productsGrid.scrollWidth > productsGrid.clientWidth;
+            
+            if (productsLeftBtn && productsRightBtn) {
+                productsLeftBtn.style.display = isAtStart || !canScroll ? 'none' : 'flex';
+                productsRightBtn.style.display = isAtEnd || !canScroll ? 'none' : 'flex';
+            }
+            
+            // Update gradient indicators
+            scrollContainer.classList.toggle('can-scroll-left', !isAtStart && canScroll);
+            scrollContainer.classList.toggle('can-scroll-right', !isAtEnd && canScroll);
+        }
+    }
+    
+    setupScrollListeners() {
+        // Add scroll event listeners to update button visibility
+        const categoriesGrid = document.getElementById('categories-grid');
+        if (categoriesGrid) {
+            categoriesGrid.addEventListener('scroll', () => this.updateScrollButtons());
+        }
+        
+        const productsGrid = document.getElementById('popular-products');
+        if (productsGrid) {
+            productsGrid.addEventListener('scroll', () => this.updateScrollButtons());
+        }
+        
+        // Update on window resize
+        window.addEventListener('resize', () => this.updateScrollButtons());
     }
 }
 

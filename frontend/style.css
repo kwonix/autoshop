@@ -212,6 +212,7 @@ nav ul li a.active::after {
 .categories {
     padding: 80px 0;
     background: white;
+    overflow: hidden;
 }
 
 .categories h2 {
@@ -222,9 +223,117 @@ nav ul li a.active::after {
 }
 
 .category-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    display: flex;
     gap: 2rem;
+    overflow-x: auto;
+    scroll-behavior: smooth;
+    padding: 1rem 0;
+    scrollbar-width: thin;
+    scrollbar-color: var(--primary-color) var(--light-color);
+    align-items: stretch;
+    min-height: 400px;
+}
+
+.category-grid::-webkit-scrollbar {
+    height: 8px;
+}
+
+.category-grid::-webkit-scrollbar-track {
+    background: var(--light-color);
+    border-radius: 4px;
+}
+
+.category-grid::-webkit-scrollbar-thumb {
+    background: var(--primary-color);
+    border-radius: 4px;
+}
+
+.category-grid::-webkit-scrollbar-thumb:hover {
+    background: var(--secondary-color);
+}
+
+/* Scroll container and buttons */
+.scroll-container {
+    position: relative;
+    padding: 0 50px;
+}
+
+/* Gradient indicators for scrollable content */
+.scroll-container::before,
+.scroll-container::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 50px;
+    z-index: 5;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.scroll-container::before {
+    left: 50px;
+    background: linear-gradient(to right, white, transparent);
+}
+
+.scroll-container::after {
+    right: 50px;
+    background: linear-gradient(to left, white, transparent);
+}
+
+.scroll-container.can-scroll-left::before {
+    opacity: 1;
+}
+
+.scroll-container.can-scroll-right::after {
+    opacity: 1;
+}
+
+.scroll-btn {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background: white;
+    border: 2px solid var(--primary-color);
+    color: var(--primary-color);
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    font-size: 1.2rem;
+    cursor: pointer;
+    z-index: 10;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.scroll-btn:hover {
+    background: var(--primary-color);
+    color: white;
+    transform: translateY(-50%) scale(1.1);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+
+.scroll-btn.scroll-left {
+    left: 0;
+}
+
+.scroll-btn.scroll-right {
+    right: 0;
+}
+
+.scroll-btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+.scroll-btn:disabled:hover {
+    background: white;
+    color: var(--primary-color);
+    transform: translateY(-50%);
 }
 
 .category-card {
@@ -234,6 +343,12 @@ nav ul li a.active::after {
     box-shadow: 0 5px 20px rgba(0,0,0,0.1);
     transition: all 0.3s ease;
     cursor: pointer;
+    flex: 0 0 280px;
+    min-width: 280px;
+    max-width: 280px;
+    display: flex;
+    flex-direction: column;
+    height: 380px;
 }
 
 .category-card:hover {
@@ -250,23 +365,49 @@ nav ul li a.active::after {
 .category-info {
     padding: 1.5rem;
     text-align: center;
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
 }
 
 .category-info h3 {
     margin-bottom: 0.5rem;
     color: var(--primary-color);
     font-size: 1.3rem;
+    min-height: 1.8em;
+    max-height: 2.6em;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    line-height: 1.3;
 }
 
 .category-info p {
     color: #666;
     margin-bottom: 1rem;
+    flex-grow: 1;
+    min-height: 2.4em;
+    max-height: 3.6em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+}
+
+.category-info .btn {
+    margin-top: auto;
 }
 
 /* Products */
 .products {
     padding: 80px 0;
     background: var(--light-color);
+    overflow: hidden;
 }
 
 .products h2 {
@@ -277,10 +418,34 @@ nav ul li a.active::after {
 }
 
 .product-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    display: flex;
     gap: 2rem;
+    overflow-x: auto;
+    scroll-behavior: smooth;
+    padding: 1rem 0;
     margin-bottom: 3rem;
+    scrollbar-width: thin;
+    scrollbar-color: var(--primary-color) var(--light-color);
+    align-items: stretch;
+    min-height: 440px;
+}
+
+.product-grid::-webkit-scrollbar {
+    height: 8px;
+}
+
+.product-grid::-webkit-scrollbar-track {
+    background: var(--light-color);
+    border-radius: 4px;
+}
+
+.product-grid::-webkit-scrollbar-thumb {
+    background: var(--primary-color);
+    border-radius: 4px;
+}
+
+.product-grid::-webkit-scrollbar-thumb:hover {
+    background: var(--secondary-color);
 }
 
 .product-card {
@@ -291,6 +456,10 @@ nav ul li a.active::after {
     transition: all 0.3s ease;
     display: flex;
     flex-direction: column;
+    flex: 0 0 280px;
+    min-width: 280px;
+    max-width: 280px;
+    height: 420px;
 }
 
 .product-card:hover {
@@ -309,12 +478,20 @@ nav ul li a.active::after {
     flex-grow: 1;
     display: flex;
     flex-direction: column;
+    height: 100%;
 }
 
 .product-info h3 {
     margin-bottom: 0.5rem;
     color: var(--primary-color);
     font-size: 1.2rem;
+    min-height: 2.4em;
+    max-height: 2.4em;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    line-height: 1.2;
 }
 
 .product-info p {
@@ -322,6 +499,11 @@ nav ul li a.active::after {
     margin-bottom: 1rem;
     flex-grow: 1;
     font-size: 0.9rem;
+    min-height: 3.6em;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
 }
 
 .price {
@@ -329,6 +511,11 @@ nav ul li a.active::after {
     color: var(--secondary-color);
     font-size: 1.3rem;
     margin: 0.5rem 0;
+}
+
+.product-info .btn {
+    margin-top: auto;
+    width: 100%;
 }
 
 /* About Section */
@@ -604,6 +791,17 @@ footer {
 }
 
 /* Responsive Design */
+/* Touch devices optimization */
+@media (hover: none) and (pointer: coarse) {
+    .scroll-btn {
+        display: none !important;
+    }
+    
+    .scroll-container {
+        padding: 0;
+    }
+}
+
 @media (max-width: 768px) {
     .header-content {
         flex-direction: column;
@@ -637,10 +835,37 @@ footer {
         flex-direction: column;
     }
     
-    .category-grid,
-    .product-grid,
     .features-grid {
         grid-template-columns: 1fr;
+    }
+    
+    .category-grid,
+    .product-grid {
+        padding: 1rem;
+        gap: 1rem;
+        min-height: auto;
+    }
+    
+    .category-card {
+        flex: 0 0 240px;
+        min-width: 240px;
+        max-width: 240px;
+        height: 340px;
+    }
+    
+    .product-card {
+        flex: 0 0 240px;
+        min-width: 240px;
+        max-width: 240px;
+        height: 380px;
+    }
+    
+    .scroll-btn {
+        display: none;
+    }
+    
+    .scroll-container {
+        padding: 0;
     }
 }
 
