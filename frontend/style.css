@@ -354,7 +354,7 @@ nav ul li a.active::after {
 }
 
 .product-img {
-    height: 200px;
+    height: 420px;
     background-size: cover;
     background-position: center;
 }

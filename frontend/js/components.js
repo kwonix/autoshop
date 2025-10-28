@@ -11,7 +11,7 @@ class Components {
                                 <li><a href="index.html" class="${window.location.pathname.endsWith('index.html') || window.location.pathname === '/' ? 'active' : ''}">Главная</a></li>
                                 <li><a href="catalog.html" class="${window.location.pathname.endsWith('catalog.html') ? 'active' : ''}">Каталог</a></li>
                                 <li><a href="cart.html" class="cart-link ${window.location.pathname.endsWith('cart.html') ? 'active' : ''}">
-                                    🛒 Корзина <span id="cart-count">0</span>
+                                    Корзина <span id="cart-count">0</span>
                                 </a></li>
                                 <li><a href="${localStorage.getItem('user_token') ? 'account.html' : 'login.html'}" class="login-btn ${window.location.pathname.endsWith('login.html') ? 'active' : ''}">
                                     ${localStorage.getItem('user_token') ? 'Кабинет' : 'Войти'}
