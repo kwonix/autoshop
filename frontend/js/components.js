@@ -24,7 +24,26 @@ class Components {
         `;
     }
 
-    static footer() {
+    static async footer() {
+        // Получаем категории для отображения в футере
+        let categoriesLinks = '';
+        try {
+            const categories = await Components.apiCall('/categories');
+            // Ограничиваем до 4 категорий
+            const limitedCategories = categories.slice(0, 4);
+            categoriesLinks = limitedCategories.map(cat => 
+                `<li><a href="catalog.html?category=${cat.slug}">${cat.name}</a></li>`
+            ).join('');
+        } catch (error) {
+            // Если не удалось загрузить, используем статические ссылки
+            categoriesLinks = `
+                <li><a href="catalog.html?category=electronics">Автоэлектроника</a></li>
+                <li><a href="catalog.html?category=care">Уход за авто</a></li>
+                <li><a href="catalog.html?category=accessories">Автоаксессуары</a></li>
+                <li><a href="catalog.html?category=safety">Безопасность</a></li>
+            `;
+        }
+
         return `
             <footer>
                 <div class="container">
@@ -41,27 +60,25 @@ class Components {
                         <div class="footer-column">
                             <h3>Категории</h3>
                             <ul>
-                                <li><a href="catalog.html?category=electronics">Автоэлектроника</a></li>
-                                <li><a href="catalog.html?category=care">Уход за авто</a></li>
-                                <li><a href="catalog.html?category=accessories">Автоаксессуары</a></li>
-                                <li><a href="catalog.html?category=safety">Безопасность</a></li>
+                                ${categoriesLinks}
                             </ul>
                         </div>
                         <div class="footer-column">
                             <h3>Помощь</h3>
                             <ul>
-                                <li><a href="#">Доставка и оплата</a></li>
-                                <li><a href="#">Гарантия и возврат</a></li>
-                                <li><a href="#">Частые вопросы</a></li>
-                                <li><a href="#">Отзывы</a></li>
+                                <li><a href="help.html#delivery">Доставка и оплата</a></li>
+                                <li><a href="help.html#warranty">Гарантия и возврат</a></li>
+                                <li><a href="help.html#faq">Частые вопросы</a></li>
+                                <li><a href="help.html#reviews">Отзывы</a></li>
                             </ul>
                         </div>
                         <div class="footer-column">
                             <h3>Контакты</h3>
                             <ul>
                                 <li>г. Москва, ул. Автозаводская, д. 15</li>
-                                <li>+7 (495) 123-45-67</li>
-                                <li>info@autogadget.ru</li>
+                                <li><a href="tel:+74951234567">+7 (495) 123-45-67</a></li>
+                                <li><a href="mailto:info@autogadget.ru">info@autogadget.ru</a></li>
+                                <li><a href="index.html#contact">Связаться с нами</a></li>
                             </ul>
                         </div>
                     </div>
@@ -270,7 +287,7 @@ class CartManager {
 }
 
 // Загрузка компонентов при загрузке страницы
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
     const headerContainer = document.getElementById('header-container');
     if (headerContainer) {
         headerContainer.innerHTML = Components.header();
@@ -278,7 +295,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     const footerContainer = document.getElementById('footer-container');
     if (footerContainer) {
-        footerContainer.innerHTML = Components.footer();
+        footerContainer.innerHTML = await Components.footer();
     }
 
     Components.updateCartCount();
