@@ -27,7 +27,7 @@
                             <input type="checkbox" name="remember">
                             <span>Запомнить меня</span>
                         </label>
-                        <a href="#" class="forgot-password">Забыли пароль?</a>
+                        <a href="#" class="forgot-password" id="forgot-password-link">Забыли пароль?</a>
                     </div>
                     <button type="submit" class="btn btn-primary auth-btn">Войти</button>
                 </form>
@@ -37,6 +37,21 @@
             </div>
         </div>
     </section>
+
+    <!-- Модальное окно восстановления пароля -->
+    <div id="forgot-password-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h2>Восстановление пароля</h2>
+            <form id="forgot-password-form" class="auth-form">
+                <div class="form-group">
+                    <label for="reset-email">Введите ваш Email</label>
+                    <input type="email" id="reset-email" name="reset-email" required>
+                </div>
+                <button type="submit" class="btn btn-primary">Отправить ссылку</button>
+            </form>
+        </div>
+    </div>
 
     <div id="footer-container"></div>
     <div id="notifications-container" class="notifications-container"></div>
