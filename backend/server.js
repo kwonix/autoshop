@@ -138,7 +138,7 @@ app.get('/', (req, res) => {
 // Получить все товары
 app.get('/api/products', async (req, res) => {
     try {
-        const { category, search, page = 1, limit = 12 } = req.query;
+        const { category, search, sort, page = 1, limit = 12 } = req.query;
         let query = `
             SELECT p.*, c.name as category_name, c.slug as category_slug 
             FROM products p 
@@ -148,19 +148,37 @@ app.get('/api/products', async (req, res) => {
         const params = [];
         let paramCount = 0;
 
+        // Фильтр по категории
         if (category && category !== 'all') {
             paramCount++;
             query += ` AND c.slug = $${paramCount}`;
             params.push(category);
         }
 
+        // Поиск
         if (search) {
             paramCount++;
             query += ` AND (p.name ILIKE $${paramCount} OR p.description ILIKE $${paramCount})`;
             params.push(`%${search}%`);
         }
 
-        query += ' ORDER BY p.popular DESC, p.name ASC';
+        // Сортировка
+        switch(sort) {
+            case 'name':
+                query += ' ORDER BY p.name ASC';
+                break;
+            case 'price-low':
+                query += ' ORDER BY p.price ASC, p.name ASC';
+                break;
+            case 'price-high':
+                query += ' ORDER BY p.price DESC, p.name ASC';
+                break;
+            case 'popular':
+                query += ' ORDER BY p.popular DESC, p.name ASC';
+                break;
+            default:
+                query += ' ORDER BY p.popular DESC, p.name ASC';
+        }
 
         // Пагинация
         const offset = (page - 1) * limit;
@@ -177,14 +195,17 @@ app.get('/api/products', async (req, res) => {
         // Получаем общее количество для пагинации
         let countQuery = "SELECT COUNT(*) FROM products p LEFT JOIN categories c ON p.category_id = c.id WHERE p.status = 'active'";
         const countParams = [];
+        let countParamIndex = 0;
         
         if (category && category !== 'all') {
-            countQuery += ' AND c.slug = $1';
+            countParamIndex++;
+            countQuery += ` AND c.slug = $${countParamIndex}`;
             countParams.push(category);
         }
         
         if (search) {
-            countQuery += category && category !== 'all' ? ' AND (p.name ILIKE $2 OR p.description ILIKE $2)' : ' AND (p.name ILIKE $1 OR p.description ILIKE $1)';
+            countParamIndex++;
+            countQuery += ` AND (p.name ILIKE $${countParamIndex} OR p.description ILIKE $${countParamIndex})`;
             countParams.push(`%${search}%`);
         }
         
@@ -196,7 +217,8 @@ app.get('/api/products', async (req, res) => {
             pagination: {
                 current: parseInt(page),
                 total: Math.ceil(total / limit),
-                hasMore: page * limit < total
+                hasMore: page * limit < total,
+                totalProducts: total
             }
         });
     } catch (error) {
