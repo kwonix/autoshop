@@ -238,14 +238,12 @@ class CartApp {
         const emailEl = document.getElementById('customer-email');
         const phoneEl = document.getElementById('customer-phone');
         const addressEl = document.getElementById('customer-address');
-        const commentEl = document.getElementById('order-comment');
 
         const formData = {
             customer_name: nameEl ? nameEl.value.trim() : '',
             customer_email: emailEl ? emailEl.value.trim() : '',
             customer_phone: phoneEl ? phoneEl.value.trim() : '',
-            customer_address: addressEl ? addressEl.value.trim() : '',
-            customer_comment: commentEl ? commentEl.value.trim() : ''
+            customer_address: addressEl ? addressEl.value.trim() : ''
         };
 
         if (!formData.customer_name || !formData.customer_email || !formData.customer_phone) {

@@ -80,31 +80,32 @@ class AuthApp {
 
     setupForgotPassword() {
         const forgotPasswordLink = document.getElementById('forgot-password-link');
-        const modal = document.getElementById('forgot-password-modal');
-        const closeModal = document.querySelector('.close-modal');
+        const forgotPasswordContainer = document.getElementById('forgot-password-container');
+        const loginContainer = document.getElementById('login-container');
+        const backToLoginLink = document.getElementById('back-to-login');
         const forgotPasswordForm = document.getElementById('forgot-password-form');
 
-        if (!forgotPasswordLink || !modal) return;
+        if (!forgotPasswordLink || !forgotPasswordContainer || !loginContainer) return;
 
-        // Открытие модального окна
+        // Показать форму восстановления пароля
         forgotPasswordLink.addEventListener('click', (e) => {
             e.preventDefault();
-            modal.style.display = 'flex';
+            forgotPasswordContainer.style.display = 'block';
+            loginContainer.classList.add('disabled');
         });
 
-        // Закрытие модального окна
-        if (closeModal) {
-            closeModal.addEventListener('click', () => {
-                modal.style.display = 'none';
+        // Вернуться к форме входа
+        if (backToLoginLink) {
+            backToLoginLink.addEventListener('click', (e) => {
+                e.preventDefault();
+                forgotPasswordContainer.style.display = 'none';
+                loginContainer.classList.remove('disabled');
+                // Очищаем форму при возврате
+                if (forgotPasswordForm) {
+                    forgotPasswordForm.reset();
+                }
             });
         }
-
-        // Закрытие при клике вне окна
-        window.addEventListener('click', (e) => {
-            if (e.target === modal) {
-                modal.style.display = 'none';
-            }
-        });
 
         // Обработка формы восстановления пароля
         if (forgotPasswordForm) {
@@ -133,7 +134,12 @@ class AuthApp {
                 'success'
             );
             
-            document.getElementById('forgot-password-modal').style.display = 'none';
+            // Скрываем форму восстановления и возвращаемся к форме входа
+            const forgotPasswordContainer = document.getElementById('forgot-password-container');
+            const loginContainer = document.getElementById('login-container');
+            
+            forgotPasswordContainer.style.display = 'none';
+            loginContainer.classList.remove('disabled');
             document.getElementById('forgot-password-form').reset();
             
         } catch (error) {

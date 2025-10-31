@@ -11,47 +11,51 @@
 
     <section class="auth-section">
         <div class="container">
-            <div class="auth-container">
-                <h2>Вход в аккаунт</h2>
-                <form class="auth-form" id="login-form">
-                    <div class="form-group">
-                        <label for="email">Email</label>
-                        <input type="email" id="email" name="email" required>
+            <div class="auth-wrapper">
+                <!-- Форма входа -->
+                <div class="auth-container" id="login-container">
+                    <h2>Вход в аккаунт</h2>
+                    <form class="auth-form" id="login-form">
+                        <div class="form-group">
+                            <label for="email">Email</label>
+                            <input type="email" id="email" name="email" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="password">Пароль</label>
+                            <input type="password" id="password" name="password" required>
+                        </div>
+                        <div class="form-options">
+                            <label class="checkbox-label">
+                                <input type="checkbox" name="remember">
+                                <span>Запомнить меня</span>
+                            </label>
+                            <a href="#" class="forgot-password" id="forgot-password-link">Забыли пароль?</a>
+                        </div>
+                        <button type="submit" class="btn btn-primary auth-btn">Войти</button>
+                    </form>
+                    <div class="auth-switch">
+                        <p>Нет аккаунта? <a href="register.html">Зарегистрироваться</a></p>
                     </div>
-                    <div class="form-group">
-                        <label for="password">Пароль</label>
-                        <input type="password" id="password" name="password" required>
+                </div>
+
+                <!-- Форма восстановления пароля (появляется справа) -->
+                <div class="auth-container forgot-password-container" id="forgot-password-container" style="display: none;">
+                    <h2>Восстановление пароля</h2>
+                    <p class="forgot-password-description">Введите ваш email, и мы отправим вам ссылку для восстановления пароля</p>
+                    <form id="forgot-password-form" class="auth-form">
+                        <div class="form-group">
+                            <label for="reset-email">Email</label>
+                            <input type="email" id="reset-email" name="reset-email" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary auth-btn">Отправить ссылку</button>
+                    </form>
+                    <div class="auth-switch">
+                        <a href="#" id="back-to-login" class="back-link">← Вернуться ко входу</a>
                     </div>
-                    <div class="form-options">
-                        <label class="checkbox-label">
-                            <input type="checkbox" name="remember">
-                            <span>Запомнить меня</span>
-                        </label>
-                        <a href="#" class="forgot-password" id="forgot-password-link">Забыли пароль?</a>
-                    </div>
-                    <button type="submit" class="btn btn-primary auth-btn">Войти</button>
-                </form>
-                <div class="auth-switch">
-                    <p>Нет аккаунта? <a href="register.html">Зарегистрироваться</a></p>
                 </div>
             </div>
         </div>
     </section>
-
-    <!-- Модальное окно восстановления пароля -->
-    <div id="forgot-password-modal" class="modal" style="display: none;">
-        <div class="modal-content">
-            <span class="close-modal">&times;</span>
-            <h2>Восстановление пароля</h2>
-            <form id="forgot-password-form" class="auth-form">
-                <div class="form-group">
-                    <label for="reset-email">Введите ваш Email</label>
-                    <input type="email" id="reset-email" name="reset-email" required>
-                </div>
-                <button type="submit" class="btn btn-primary">Отправить ссылку</button>
-            </form>
-        </div>
-    </div>
 
     <div id="footer-container"></div>
     <div id="notifications-container" class="notifications-container"></div>

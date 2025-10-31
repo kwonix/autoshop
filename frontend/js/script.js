@@ -119,7 +119,7 @@ class ShopApp {
         if (token) {
             const loginBtn = document.querySelector('.login-btn');
             if (loginBtn) {
-                loginBtn.textContent = '👤 Кабинет';
+                loginBtn.textContent = 'Профиль';
                 loginBtn.href = 'account.html';
             }
         }

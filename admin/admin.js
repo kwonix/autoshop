@@ -93,7 +93,6 @@ class AdminApp {
             orders: 'Управление заказами',
             products: 'Управление товарами',
             categories: 'Управление категориями',
-            analytics: 'Аналитика продаж',
             messages: 'Обратная связь'
         };
         return titles[page] || 'Админ-панель';
@@ -113,9 +112,6 @@ class AdminApp {
                     break;
                 case 'categories':
                     await this.loadCategories();
-                    break;
-                case 'analytics':
-                    await this.loadAnalytics();
                     break;
                 case 'messages':
                     await this.loadMessages();
@@ -211,22 +207,18 @@ class AdminApp {
             <div class="stat-card">
                 <h3>Всего заказов</h3>
                 <div class="value">${stats.total_orders}</div>
-                <div class="trend positive">+12% за неделю</div>
             </div>
             <div class="stat-card">
                 <h3>Новые заказы</h3>
                 <div class="value">${stats.new_orders}</div>
-                <div class="trend positive">Требуют обработки</div>
             </div>
             <div class="stat-card">
                 <h3>Общая выручка</h3>
                 <div class="value">${this.formatPrice(stats.total_revenue)}</div>
-                <div class="trend positive">+8% за неделю</div>
             </div>
             <div class="stat-card">
                 <h3>Новые сообщения</h3>
                 <div class="value">${stats.new_messages}</div>
-                <div class="trend">Требуют ответа</div>
             </div>
         `;
 
@@ -1123,52 +1115,6 @@ class AdminApp {
         } catch (error) {
             this.showNotification(error.message || 'Ошибка удаления категории', 'error');
         }
-    }
-
-    // === ANALYTICS ===
-    async loadAnalytics() {
-        const period = document.getElementById('analytics-period')?.value || 'week';
-        const analytics = await this.apiCall(`/analytics?period=${period}`);
-        this.renderAnalytics(analytics);
-    }
-
-    renderAnalytics(analytics) {
-        this.renderTopProducts(analytics.top_products);
-        this.renderAnalyticsTable(analytics.top_products);
-    }
-
-    renderTopProducts(products) {
-        const container = document.getElementById('top-products-list');
-        if (!container) return;
-
-        container.innerHTML = products.map((product, index) => `
-            <div style="padding: 10px 0; border-bottom: 1px solid #f0f0f0;">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <div>
-                        <strong>${index + 1}. ${product.name}</strong>
-                        <br>
-                        <small>${product.sales_count} продаж</small>
-                    </div>
-                    <div style="text-align: right;">
-                        <strong>${this.formatPrice(product.revenue)}</strong>
-                    </div>
-                </div>
-            </div>
-        `).join('');
-    }
-
-    renderAnalyticsTable(products) {
-        const tbody = document.getElementById('analytics-table-body');
-        if (!tbody) return;
-
-        tbody.innerHTML = products.map(product => `
-            <tr>
-                <td>${product.name}</td>
-                <td>${product.sales_count}</td>
-                <td>${this.formatPrice(product.revenue)}</td>
-                <td>⭐ 4.8</td>
-            </tr>
-        `).join('');
     }
 
     // === MESSAGES ===

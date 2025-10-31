@@ -13,8 +13,8 @@ class Components {
                                 <li><a href="cart.html" class="cart-link ${window.location.pathname.endsWith('cart.html') ? 'active' : ''}">
                                     Корзина <span id="cart-count">0</span>
                                 </a></li>
-                                <li><a href="${localStorage.getItem('user_token') ? 'account.html' : 'login.html'}" class="login-btn ${window.location.pathname.endsWith('login.html') ? 'active' : ''}">
-                                    ${localStorage.getItem('user_token') ? 'Кабинет' : 'Войти'}
+                                <li><a href="${localStorage.getItem('user_token') ? 'account.html' : 'login.html'}" class="login-btn">
+                                    ${localStorage.getItem('user_token') ? 'Профиль' : 'Войти'}
                                 </a></li>
                             </ul>
                         </nav>

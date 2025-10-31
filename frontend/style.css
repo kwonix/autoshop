@@ -41,6 +41,57 @@ ul {
     list-style: none;
 }
 
+/* Общие стили для чекбоксов */
+input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    min-width: 18px;
+    min-height: 18px;
+    cursor: pointer;
+    accent-color: var(--primary-color);
+    vertical-align: middle;
+}
+
+/* Для старых браузеров */
+@supports not (accent-color: var(--primary-color)) {
+    input[type="checkbox"] {
+        appearance: none;
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        border: 2px solid var(--border-color);
+        border-radius: 3px;
+        background: white;
+        position: relative;
+        transition: all 0.3s ease;
+    }
+    
+    input[type="checkbox"]:checked {
+        background: var(--primary-color);
+        border-color: var(--primary-color);
+    }
+    
+    input[type="checkbox"]:checked::after {
+        content: '✓';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        color: white;
+        font-size: 14px;
+        font-weight: bold;
+        line-height: 1;
+    }
+    
+    input[type="checkbox"]:hover:not(:disabled) {
+        border-color: var(--primary-color);
+    }
+    
+    input[type="checkbox"]:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+}
+
 .btn {
     display: inline-flex;
     align-items: center;
@@ -180,6 +231,15 @@ nav ul li a.active::after {
     background: #8ecae6;
     transform: none;
     box-shadow: none;
+}
+
+/* Отключаем стили активной страницы для кнопки входа */
+.login-btn.active {
+    color: var(--primary-color);
+}
+
+.login-btn.active::after {
+    display: none;
 }
 
 /* Hero Section */
@@ -625,20 +685,22 @@ footer {
 /* Notifications */
 .notifications-container {
     position: fixed;
-    top: 20px;
+    bottom: 20px;
     right: 20px;
     z-index: 2000;
     display: flex;
-    flex-direction: column;
+    flex-direction: column-reverse;
     gap: 10px;
+    pointer-events: none;
 }
 
 .notification {
+    pointer-events: auto;
     padding: 15px 20px;
     border-radius: 8px;
     color: white;
     box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-    animation: slideInRight 0.3s ease;
+    animation: slideInUp 0.3s ease;
     max-width: 300px;
 }
 
@@ -661,6 +723,17 @@ footer {
     }
     to {
         transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideInUp {
+    from {
+        transform: translateY(20px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
         opacity: 1;
     }
 }
@@ -733,6 +806,19 @@ footer {
     
     .product-card {
         height: 400px;
+    }
+    
+    /* Уведомления на мобильных */
+    .notifications-container {
+        left: 10px;
+        right: 10px;
+        bottom: 10px;
+        max-width: calc(100vw - 20px);
+    }
+    
+    .notification {
+        max-width: 100%;
+        width: 100%;
     }
 }
 
@@ -946,13 +1032,46 @@ footer {
     justify-content: center;
 }
 
+.auth-wrapper {
+    display: flex;
+    gap: 2rem;
+    align-items: flex-start;
+    justify-content: center;
+    flex-wrap: wrap;
+    width: 100%;
+}
+
 .auth-container {
     max-width: 400px;
     width: 100%;
+    margin: 0 auto;
     background: white;
     padding: 2rem;
     border-radius: 12px;
     box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.auth-container.disabled {
+    opacity: 0.4;
+    pointer-events: none;
+    filter: blur(2px);
+    transform: scale(0.98);
+}
+
+.forgot-password-container {
+    animation: slideInRight 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes slideInRight {
+    from {
+        opacity: 0;
+        transform: translateX(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
 }
 
 .auth-container h2 {
@@ -1005,14 +1124,107 @@ footer {
 
 .checkbox-label {
     display: flex;
-    align-items: center;
-    gap: 0.5rem;
+    align-items: flex-start;
+    gap: 0.75rem;
     cursor: pointer;
+    user-select: none;
+    line-height: 1.5;
+}
+
+.checkbox-label input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    margin-top: 2px;
+    cursor: pointer;
+    accent-color: var(--primary-color);
+    flex-shrink: 0;
+}
+
+.checkbox-label span {
+    flex: 1;
+    line-height: 1.5;
+}
+
+.checkbox-label a {
+    color: var(--secondary-color);
+    text-decoration: underline;
+}
+
+.checkbox-label a:hover {
+    color: var(--primary-color);
+}
+
+/* Для старых браузеров - кастомный чекбокс */
+@supports not (accent-color: var(--primary-color)) {
+    .checkbox-label input[type="checkbox"] {
+        appearance: none;
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        width: 18px;
+        height: 18px;
+        min-width: 18px;
+        min-height: 18px;
+        margin-top: 2px;
+        border: 2px solid var(--border-color);
+        border-radius: 3px;
+        background: white;
+        position: relative;
+        transition: all 0.3s ease;
+    }
+    
+    .checkbox-label input[type="checkbox"]:checked {
+        background: var(--primary-color);
+        border-color: var(--primary-color);
+    }
+    
+    .checkbox-label input[type="checkbox"]:checked::after {
+        content: '✓';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        color: white;
+        font-size: 14px;
+        font-weight: bold;
+        line-height: 1;
+    }
+    
+    .checkbox-label input[type="checkbox"]:hover {
+        border-color: var(--primary-color);
+    }
 }
 
 .forgot-password {
     color: var(--secondary-color);
     font-size: 0.9rem;
+    transition: all 0.3s ease;
+}
+
+.forgot-password:hover {
+    color: var(--primary-color);
+    text-decoration: underline;
+}
+
+.forgot-password-description {
+    color: #666;
+    font-size: 0.95rem;
+    margin-bottom: 1.5rem;
+    text-align: center;
+    line-height: 1.5;
+}
+
+.back-link {
+    color: var(--primary-color);
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.3s ease;
+}
+
+.back-link:hover {
+    color: var(--secondary-color);
+    transform: translateX(-5px);
 }
 
 .auth-btn {
@@ -1034,6 +1246,15 @@ footer {
 
 /* Mobile adjustments */
 @media (max-width: 768px) {
+    .auth-wrapper {
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .auth-container {
+        max-width: 100%;
+    }
+    
     .cart-content {
         flex-direction: column;
     }
@@ -1582,4 +1803,154 @@ textarea[readonly] {
 
 .top-catalog{
     padding-bottom: 2rem;
+}
+
+/* Forgot Password Modal Styles */
+#forgot-password-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.6);
+    z-index: 10001;
+    overflow: auto;
+    padding: 20px;
+}
+
+/* Когда модальное окно активно */
+#forgot-password-modal[style*="display: flex"],
+#forgot-password-modal[style*="display: block"] {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+}
+
+#forgot-password-modal .modal-content {
+    background: white;
+    border-radius: 12px;
+    padding: 2.5rem;
+    max-width: 500px;
+    width: 100%;
+    margin: auto;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+    position: relative;
+    animation: modalSlideUp 0.3s ease-out;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+@keyframes modalSlideUp {
+    from {
+        opacity: 0;
+        transform: translateY(50px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+#forgot-password-modal .modal-content h2 {
+    color: var(--primary-color);
+    margin-bottom: 1.5rem;
+    margin-top: 0.5rem;
+    font-size: 1.8rem;
+    text-align: center;
+    font-weight: 700;
+}
+
+#forgot-password-modal .close-modal {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    font-size: 28px;
+    font-weight: 700;
+    color: #999;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    line-height: 1;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: transparent;
+    border: none;
+    padding: 0;
+}
+
+#forgot-password-modal .close-modal:hover {
+    color: white;
+    background-color: var(--danger-color);
+    transform: rotate(90deg);
+}
+
+#forgot-password-modal .auth-form {
+    margin-bottom: 0;
+}
+
+#forgot-password-modal .form-group {
+    margin-bottom: 1.5rem;
+}
+
+#forgot-password-modal .form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    color: var(--dark-color);
+    font-size: 1rem;
+}
+
+#forgot-password-modal .form-group input {
+    width: 100%;
+    padding: 12px 15px;
+    border: 2px solid var(--border-color);
+    border-radius: 6px;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    font-family: inherit;
+}
+
+#forgot-password-modal .form-group input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(29, 53, 87, 0.1);
+}
+
+#forgot-password-modal .btn {
+    width: 100%;
+    padding: 14px;
+    font-size: 1.1rem;
+    margin-top: 0.5rem;
+}
+
+/* Предотвращаем прокрутку body когда модальное окно открыто */
+body.modal-open {
+    overflow: hidden;
+}
+
+@media (max-width: 768px) {
+    #forgot-password-modal {
+        padding: 15px;
+    }
+    
+    #forgot-password-modal .modal-content {
+        padding: 2rem 1.5rem;
+        max-width: 100%;
+    }
+    
+    #forgot-password-modal .modal-content h2 {
+        font-size: 1.5rem;
+    }
+    
+    #forgot-password-modal .close-modal {
+        width: 35px;
+        height: 35px;
+        font-size: 24px;
+    }
 }

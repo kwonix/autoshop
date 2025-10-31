@@ -30,9 +30,6 @@
                 <li><a href="#categories" class="admin-menu-item" data-page="categories">
                     📁 Категории
                 </a></li>
-                <li><a href="#analytics" class="admin-menu-item" data-page="analytics">
-                    📈 Аналитика
-                </a></li>
                 <li><a href="#messages" class="admin-menu-item" data-page="messages">
                     ✉️ Сообщения <span class="menu-badge" id="new-messages-count">0</span>
                 </a></li>
@@ -159,51 +156,6 @@
                     
                     <div class="categories-grid" id="categories-grid">
                         <!-- Сетка категорий -->
-                    </div>
-                </div>
-
-                <!-- Страница Аналитики -->
-                <div id="analytics-page" class="admin-page">
-                    <div class="analytics-period">
-                        <select id="analytics-period" class="filter-select" onchange="adminApp.loadAnalytics()">
-                            <option value="week">За неделю</option>
-                            <option value="month">За месяц</option>
-                            <option value="quarter">За квартал</option>
-                            <option value="year">За год</option>
-                        </select>
-                    </div>
-                    
-                    <div class="analytics-grid">
-                        <div class="analytics-card">
-                            <h3>Продажи</h3>
-                            <div class="chart-placeholder" id="sales-chart">
-                                <p>График продаж</p>
-                            </div>
-                        </div>
-                        
-                        <div class="analytics-card">
-                            <h3>Топ товары</h3>
-                            <div id="top-products-list">
-                                <!-- Список топ товаров -->
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="analytics-table">
-                        <h3>Детальная статистика</h3>
-                        <table class="admin-table">
-                            <thead>
-                                <tr>
-                                    <th>Товар</th>
-                                    <th>Продажи</th>
-                                    <th>Выручка</th>
-                                    <th>Рейтинг</th>
-                                </tr>
-                            </thead>
-                            <tbody id="analytics-table-body">
-                                <!-- Данные аналитики -->
-                            </tbody>
-                        </table>
                     </div>
                 </div>
 
